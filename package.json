@@ -1,0 +1,27 @@
+{
+  "name": "taskflow-api",
+  "version": "1.0.0",
+  "description": "API REST de gestion de projets et tâches - projet fil rouge de la formation DevOps Senior",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Les tests arrivent au module 7\" && exit 0"
+  },
+  "keywords": ["nodejs", "express", "rest-api", "devops"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "joi": "^17.13.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
