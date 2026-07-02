@@ -14,6 +14,9 @@ function findAll(filters = {}) {
   if (filters.status) {
     result = result.filter((t) => t.status === filters.status);
   }
+  if (filters.priority) {
+    result = result.filter((t) => t.priority === filters.priority);
+  }
   return result;
 }
 
