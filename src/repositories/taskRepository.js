@@ -1,68 +1,97 @@
-/**
- * Repository en mémoire pour les tâches. Même logique que projectRepository :
- * sera remplacé par PostgreSQL au module 5 sans casser le reste de l'app.
- */
+const pool = require('../config/db');
 
-let tasks = [];
-let nextId = 1;
+const SELECT_FIELDS = `id, project_id AS "projectId", title, description, status, priority,
+  due_date AS "dueDate", created_at AS "createdAt", updated_at AS "updatedAt"`;
 
-function findAll(filters = {}) {
-  let result = tasks;
+const UPDATABLE_COLUMNS = {
+  title: 'title',
+  description: 'description',
+  priority: 'priority',
+  dueDate: 'due_date',
+  status: 'status',
+};
+
+async function findAll(filters = {}) {
+  const conditions = [];
+  const values = [];
+  let idx = 1;
+
   if (filters.projectId) {
-    result = result.filter((t) => t.projectId === filters.projectId);
+    conditions.push(`project_id = $${idx}`);
+    values.push(filters.projectId);
+    idx += 1;
   }
   if (filters.status) {
-    result = result.filter((t) => t.status === filters.status);
+    conditions.push(`status = $${idx}`);
+    values.push(filters.status);
+    idx += 1;
   }
   if (filters.priority) {
-    result = result.filter((t) => t.priority === filters.priority);
+    conditions.push(`priority = $${idx}`);
+    values.push(filters.priority);
+    idx += 1;
   }
-  return result;
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const { rows } = await pool.query(`SELECT ${SELECT_FIELDS} FROM tasks ${where} ORDER BY id`, values);
+  return rows;
 }
 
-function findById(id) {
-  return tasks.find((t) => t.id === id) || null;
+async function findById(id) {
+  const { rows } = await pool.query(`SELECT ${SELECT_FIELDS} FROM tasks WHERE id = $1`, [id]);
+  return rows[0] || null;
 }
 
-function create({ projectId, title, description, priority, dueDate }) {
-  const task = {
-    id: nextId++,
-    projectId,
-    title,
-    description: description || '',
-    status: 'todo',
-    priority: priority || 'medium',
-    dueDate: dueDate || null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  tasks.push(task);
-  return task;
+async function create({
+  projectId, title, description, priority, dueDate,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO tasks (project_id, title, description, priority, due_date)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING ${SELECT_FIELDS}`,
+    [projectId, title, description || '', priority || 'medium', dueDate || null],
+  );
+  return rows[0];
 }
 
-function update(id, updates) {
-  const task = findById(id);
-  if (!task) return null;
-  Object.assign(task, updates, { updatedAt: new Date().toISOString() });
-  return task;
+async function update(id, updates) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  Object.entries(updates).forEach(([key, value]) => {
+    const column = UPDATABLE_COLUMNS[key];
+    if (!column) return;
+    fields.push(`${column} = $${idx}`);
+    values.push(value);
+    idx += 1;
+  });
+
+  if (fields.length === 0) return findById(id);
+
+  fields.push('updated_at = now()');
+  values.push(id);
+
+  const { rows } = await pool.query(
+    `UPDATE tasks SET ${fields.join(', ')} WHERE id = $${idx} RETURNING ${SELECT_FIELDS}`,
+    values,
+  );
+  return rows[0] || null;
 }
 
-function remove(id) {
-  const index = tasks.findIndex((t) => t.id === id);
-  if (index === -1) return false;
-  tasks.splice(index, 1);
-  return true;
+async function remove(id) {
+  const { rowCount } = await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
+  return rowCount > 0;
 }
 
-function countByProject(projectId) {
-  return tasks.filter((t) => t.projectId === projectId).length;
-}
-
-function _reset() {
-  tasks = [];
-  nextId = 1;
+async function countByProject(projectId) {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS count FROM tasks WHERE project_id = $1',
+    [projectId],
+  );
+  return rows[0].count;
 }
 
 module.exports = {
-  findAll, findById, create, update, remove, countByProject, _reset,
+  findAll, findById, create, update, remove, countByProject,
 };

@@ -6,9 +6,17 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "migrate:create": "node-pg-migrate create",
     "test": "echo \"Les tests arrivent au module 7\" && exit 0"
   },
-  "keywords": ["nodejs", "express", "rest-api", "devops"],
+  "keywords": [
+    "nodejs",
+    "express",
+    "rest-api",
+    "devops"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
@@ -19,7 +27,9 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "joi": "^17.13.1",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "node-pg-migrate": "^8.0.4",
+    "pg": "^8.22.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

@@ -1,54 +1,73 @@
+const pool = require('../config/db');
+
 /**
- * Repository en mémoire pour les projets.
- *
- * ⚠️ Volontairement "naïf" pour le module 1 : toutes les données disparaissent
- * au redémarrage du process. Au module 5, on remplacera l'intérieur de ces
- * fonctions par de vraies requêtes SQL (PostgreSQL), SANS changer la signature
- * des fonctions -> les services et controllers n'auront rien à modifier.
- * C'est le principe du Repository Pattern.
+ * Repository PostgreSQL pour les projets.
+ * Remplace l'implémentation en mémoire du module 1, SANS changer la
+ * signature d'aucune fonction -> services, controllers et routes
+ * n'ont rien eu à changer. C'est tout l'intérêt du Repository Pattern.
  */
 
-let projects = [];
-let nextId = 1;
+const SELECT_FIELDS = `id, name, description, status,
+  created_at AS "createdAt", updated_at AS "updatedAt"`;
 
-function findAll() {
-  return projects;
+// Whitelist explicite des colonnes modifiables : on ne construit JAMAIS
+// un nom de colonne SQL à partir d'une clé arbitraire venant du client,
+// même si Joi filtre déjà les entrées en amont (défense en profondeur).
+const UPDATABLE_COLUMNS = {
+  name: 'name',
+  description: 'description',
+  status: 'status',
+};
+
+async function findAll() {
+  const { rows } = await pool.query(`SELECT ${SELECT_FIELDS} FROM projects ORDER BY id`);
+  return rows;
 }
 
-function findById(id) {
-  return projects.find((p) => p.id === id) || null;
+async function findById(id) {
+  const { rows } = await pool.query(`SELECT ${SELECT_FIELDS} FROM projects WHERE id = $1`, [id]);
+  return rows[0] || null;
 }
 
-function create({ name, description }) {
-  const project = {
-    id: nextId++,
-    name,
-    description: description || '',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-  };
-  projects.push(project);
-  return project;
+async function create({ name, description }) {
+  const { rows } = await pool.query(
+    `INSERT INTO projects (name, description) VALUES ($1, $2)
+     RETURNING ${SELECT_FIELDS}`,
+    [name, description || ''],
+  );
+  return rows[0];
 }
 
-function update(id, updates) {
-  const project = findById(id);
-  if (!project) return null;
-  Object.assign(project, updates, { updatedAt: new Date().toISOString() });
-  return project;
+async function update(id, updates) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  Object.entries(updates).forEach(([key, value]) => {
+    const column = UPDATABLE_COLUMNS[key];
+    if (!column) return;
+    fields.push(`${column} = $${idx}`);
+    values.push(value);
+    idx += 1;
+  });
+
+  if (fields.length === 0) return findById(id);
+
+  fields.push('updated_at = now()');
+  values.push(id);
+
+  const { rows } = await pool.query(
+    `UPDATE projects SET ${fields.join(', ')} WHERE id = $${idx} RETURNING ${SELECT_FIELDS}`,
+    values,
+  );
+  return rows[0] || null;
 }
 
-function remove(id) {
-  const index = projects.findIndex((p) => p.id === id);
-  if (index === -1) return false;
-  projects.splice(index, 1);
-  return true;
+async function remove(id) {
+  const { rowCount } = await pool.query('DELETE FROM projects WHERE id = $1', [id]);
+  return rowCount > 0;
 }
 
-// Utilitaire réservé aux tests (module 7) pour repartir d'un état propre.
-function _reset() {
-  projects = [];
-  nextId = 1;
-}
-
-module.exports = { findAll, findById, create, update, remove, _reset };
+module.exports = {
+  findAll, findById, create, update, remove,
+};

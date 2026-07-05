@@ -1,5 +1,6 @@
 const app = require('./app');
 const config = require('./config/config');
+const pool = require('./config/db');
 
 const server = app.listen(config.port, () => {
   console.log(`🚀 TaskFlow API démarrée en mode "${config.env}" sur le port ${config.port}`);
@@ -16,5 +17,8 @@ process.on('unhandledRejection', (err) => {
 
 process.on('SIGTERM', () => {
   console.log('👋 SIGTERM reçu, arrêt propre du serveur...');
-  server.close(() => console.log('Process terminé.'));
+  server.close(async () => {
+    await pool.end();
+    console.log('Process terminé (pool PostgreSQL fermé).');
+  });
 });
