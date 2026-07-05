@@ -8,6 +8,11 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Surcharge la valeur de .env (qui pointe vers "localhost" pour un usage
+      # hors Docker) : dans le réseau taskflow-net, PostgreSQL est joignable
+      # via le nom du service "db", pas "localhost".
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     ports:
       # Exposé pour l'instant pour tester directement. Au module 6, Nginx
       # deviendra le seul point d'entrée public et ce port ne sera plus

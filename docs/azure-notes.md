@@ -70,6 +70,32 @@ docker compose down              # arrêt (les volumes/données persistent)
 docker compose down -v           # arrêt + suppression des volumes (⚠️ perte de données)
 ```
 
+## Module 5 : PostgreSQL
+
+Sur ta VM, PostgreSQL tourne **dans le conteneur Docker `db`**, pas installé
+directement sur Ubuntu — c'est plus propre et cohérent avec `docker-compose.yml`.
+
+### Sauvegardes (important dès maintenant, avant d'avoir de vraies données)
+
+```bash
+# Dump manuel depuis la VM
+docker compose exec db pg_dump -U taskflow_user taskflow > backup_$(date +%F).sql
+
+# Restauration
+cat backup_2026-07-05.sql | docker compose exec -T db psql -U taskflow_user -d taskflow
+```
+
+Pense à automatiser ce dump via une tâche cron sur la VM et à copier le fichier
+vers un stockage externe (Azure Blob Storage) — perdre le disque de la VM ne
+doit jamais signifier perdre les données.
+
+### Exécuter les migrations sur la VM
+
+```bash
+# Après un `docker compose up -d`, exécuter les migrations dans le conteneur api
+docker compose exec api npm run migrate:up
+```
+
 ## À venir dans les prochains modules
 
 - **Module 6** : Nginx en reverse proxy + Let's Encrypt (Certbot) sur ton domaine/IP publique. Le port 3000 sera fermé côté NSG.
