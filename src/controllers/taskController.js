@@ -5,6 +5,7 @@ function getAll(req, res, next) {
     const filters = {
       projectId: req.query.projectId ? parseInt(req.query.projectId, 10) : undefined,
       status: req.query.status,
+      priority: req.query.priority,
     };
     const tasks = taskService.getAllTasks(filters);
     res.status(200).json({ status: 'success', results: tasks.length, data: tasks });
