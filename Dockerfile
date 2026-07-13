@@ -10,7 +10,7 @@ FROM node:20-alpine AS base
 WORKDIR /app
 COPY package.json package-lock.json ./
 
-
+ 
 # ============================================================
 # Stage "dependencies" : installe TOUTES les dépendances
 # (y compris devDependencies). Ce stage n'est pas utilisé dans
