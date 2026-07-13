@@ -121,6 +121,18 @@ curl -I https://mid-apptest.bmoinet.net/health
 - Le port **80** doit rediriger vers 443 (déjà géré par Nginx), les deux doivent rester ouverts dans le NSG
 - Le port 3000 reste joignable uniquement en local sur la VM (`127.0.0.1:3000`), jamais depuis Internet
 
+### Revenir à l'app PHP (rollback)
+
+`pure.conf` n'est pas supprimé, seulement désactivé — `taskflow.conf` et
+`pure.conf` utilisent le même domaine et le même port 443, donc un seul des
+deux peut être actif à la fois dans `sites-enabled`.
+
+```bash
+sudo ./deploy/nginx/rollback-to-php.sh
+```
+
+Pour revenir ensuite à l'API Node : `sudo ./deploy/nginx/install.sh`.
+
 ## À venir dans les prochains modules
 
 - **Module 6** : Nginx en reverse proxy + Let's Encrypt (Certbot) sur ton domaine/IP publique. Le port 3000 sera fermé côté NSG.
