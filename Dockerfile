@@ -48,6 +48,7 @@ RUN addgroup -S nodejs && adduser -S taskflow -G nodejs
 COPY --from=prod-dependencies /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
+COPY migrations ./migrations
 
 USER taskflow
 
