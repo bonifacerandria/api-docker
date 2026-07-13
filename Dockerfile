@@ -20,8 +20,8 @@ COPY package.json package-lock.json ./
 FROM base AS dependencies
 RUN npm ci
 
-
-# ============================================================
+#modification de test 
+# ================================== ==========================
 # Stage "prod-dependencies" : installe UNIQUEMENT les
 # dépendances de production. C'est ce qui finira dans l'image
 # finale -> pas de nodemon, pas d'outils de dev en production.
