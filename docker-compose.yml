@@ -14,11 +14,10 @@ services:
       # via le nom du service "db", pas "localhost".
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     ports:
-      # Exposé pour l'instant pour tester directement. Au module 6, Nginx
-      # deviendra le seul point d'entrée public et ce port ne sera plus
-      # mappé vers l'extérieur (uniquement accessible via le réseau interne
-      # taskflow-net).
-      - "3000:3000"
+      # Depuis le module 6 : Nginx est l'unique point d'entrée public
+      # (443 -> proxy_pass vers 127.0.0.1:3000). Le port 3000 n'est donc
+      # plus exposé sur 0.0.0.0 : uniquement accessible depuis la VM elle-même.
+      - "127.0.0.1:3000:3000"
     depends_on:
       db:
         condition: service_healthy
