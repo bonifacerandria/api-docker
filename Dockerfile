@@ -20,8 +20,8 @@ COPY package.json package-lock.json ./
 FROM base AS dependencies
 RUN npm ci
 
-#modification de test 
-# ================================== ==========================
+
+# ============================================================
 # Stage "prod-dependencies" : installe UNIQUEMENT les
 # dépendances de production. C'est ce qui finira dans l'image
 # finale -> pas de nodemon, pas d'outils de dev en production.
@@ -48,12 +48,13 @@ RUN addgroup -S nodejs && adduser -S taskflow -G nodejs
 COPY --from=prod-dependencies /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
+COPY migrations ./migrations
 
 USER taskflow
 
 EXPOSE 3000
 
-# Healthcheck : réutilise l'endpoint /health du module 1.
+# Healthcheck   : réutilise l'endpoint /health du module 1.
 # Docker (et plus tard Kubernetes) s'en servent pour savoir si
 # le conteneur est réellement opérationnel, pas juste "démarré".
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
