@@ -96,6 +96,31 @@ doit jamais signifier perdre les données.
 docker compose exec api npm run migrate:up
 ```
 
+## Module 6 : Nginx (reverse proxy)
+
+Domaine : `mid-apptest.bmoinet.net` — certificat déjà en place
+(`/etc/bmoi_key/bmoifull.pem` + `bmoiprivatenopass.key`), pas besoin de
+Certbot/Let's Encrypt ici.
+
+Cette config remplace `pure.conf` (l'ancienne app PHP `e-commercev2`) par un
+reverse proxy vers l'API Node conteneurisée.
+
+```bash
+cd /var/www/api-docker   # ou l'emplacement du repo cloné sur la VM
+chmod +x deploy/nginx/install.sh
+sudo ./deploy/nginx/install.sh
+```
+
+**Vérification :**
+```bash
+curl -I https://mid-apptest.bmoinet.net/health
+```
+
+**Ajustement NSG Azure à faire maintenant :**
+- Fermer le port **3000** dans le NSG (n'était ouvert que temporairement pour les tests du module 4-5)
+- Le port **80** doit rediriger vers 443 (déjà géré par Nginx), les deux doivent rester ouverts dans le NSG
+- Le port 3000 reste joignable uniquement en local sur la VM (`127.0.0.1:3000`), jamais depuis Internet
+
 ## À venir dans les prochains modules
 
 - **Module 6** : Nginx en reverse proxy + Let's Encrypt (Certbot) sur ton domaine/IP publique. Le port 3000 sera fermé côté NSG.
