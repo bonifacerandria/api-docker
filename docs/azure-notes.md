@@ -133,6 +133,25 @@ sudo ./deploy/nginx/rollback-to-php.sh
 
 Pour revenir ensuite à l'API Node : `sudo ./deploy/nginx/install.sh`.
 
+## Module 7 : Tests automatisés
+
+Les tests d'intégration ont besoin d'une base PostgreSQL de test, distincte
+de la base de dev/prod. Sur la VM (ou en local), avant de lancer les tests :
+
+```bash
+docker compose exec db psql -U taskflow_user -d postgres \
+  -c "CREATE DATABASE taskflow_test OWNER taskflow_user;"
+
+cp .env.test.example .env.test   # ajuster si besoin
+npm run test:coverage
+```
+
+**Ne jamais faire tourner les tests avec `DATABASE_URL` pointant vers la base
+de prod** : les tests d'intégration font un `TRUNCATE` complet entre chaque
+cas. Un garde-fou dans `tests/setup/env.js` bloque le lancement si
+`DATABASE_URL` ne contient pas le mot "test", mais ça reste une vérification
+naïve — reste vigilant sur le fichier `.env.test` utilisé.
+
 ## À venir dans les prochains modules
 
 - **Module 6** : Nginx en reverse proxy + Let's Encrypt (Certbot) sur ton domaine/IP publique. Le port 3000 sera fermé côté NSG.
