@@ -49,6 +49,7 @@ COPY --from=prod-dependencies /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
 COPY migrations ./migrations
+COPY scripts ./scripts
 
 USER taskflow
 
