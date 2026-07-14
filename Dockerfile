@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # ============================================================
-# Dépendances complètes (dev + prod)
+# Dépendances complètes (dev + prod) 
 # ============================================================
 FROM base AS dependencies
 
@@ -39,7 +39,7 @@ USER root
 CMD ["npm","test"]
 
 # ============================================================
-# Stage PRODUCTION
+# Stage PRODUCTION gff
 # ============================================================
 FROM node:20-alpine AS runner
 
