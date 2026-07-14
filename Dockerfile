@@ -24,7 +24,7 @@ FROM base AS prod-dependencies
 RUN npm ci --omit=dev
 
 # ============================================================
-# Stage TEST
+# Stage TEST 
 # ============================================================
 FROM dependencies AS test
 
