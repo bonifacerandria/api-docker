@@ -35,8 +35,8 @@ services:
     volumes:
       - taskflow-db-data:/var/lib/postgresql/data
     ports:
-      # IMPORTANT (VM Azure avec IP publique) : on bind sur 127.0.0.1 et non
-      # 0.0.0.0. Sans ça, le port 5432 serait potentiellement joignable
+      # IMPORTANT (VM Azure avec IP publique) : on bind sur 127.0.0.1 et non  main      
+      # 0.0.0.0. Sans ça, le port 5432 serait potentiellement joignable : docker-compose
       # depuis Internet dès qu'une règle NSG l'autoriserait par erreur.
       # Cette restriction locale est une deuxième ligne de défense.
       - "127.0.0.1:5432:5432"
