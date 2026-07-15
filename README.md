@@ -1,5 +1,7 @@
 # TaskFlow API
 
+![CI](https://github.com/TON_USERNAME/taskflow-api/actions/workflows/ci.yml/badge.svg)
+
 API REST de gestion de projets et tâches — **projet fil rouge** de la formation DevOps Senior.
 Chaque module de la formation viendra enrichir ce même projet (Docker, PostgreSQL, CI/CD,
 monitoring, Kubernetes...) sans jamais le réécrire de zéro.
