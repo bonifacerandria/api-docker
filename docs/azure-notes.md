@@ -57,7 +57,7 @@ sudo ufw allow OpenSSH
 sudo ufw allow 3000/tcp   # temporaire, sera retiré au module 6
 sudo ufw enable
 sudo ufw status
-```
+```  
 
 ### Commandes Docker Compose à connaître
 
