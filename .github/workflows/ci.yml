@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Annule automatiquement une exécution en cours si un nouveau push arrive
+# sur la même branche - évite de gaspiller des minutes CI sur un code déjà
+# obsolète (ex: plusieurs push rapides sur une PR).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================
+  # Job 1 : construit et fait tourner les tests dans l'image Docker
+  # "test" - EXACTEMENT le même Dockerfile et le même conteneur que
+  # celui utilisé en local et sur la VM (docker compose --profile test
+  # run --rm api-test). Si un test passe ici mais pas sur la VM (ou
+  # l'inverse), c'est le signe d'une vraie divergence d'environnement.
+  # ============================================================
+  test:
+    name: Tests (image Docker "test")
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: taskflow_test
+          POSTGRES_USER: taskflow_user
+          POSTGRES_PASSWORD: change_me_in_production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U taskflow_user -d taskflow_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Construire l'image du stage "test"
+        run: docker build --target test -t taskflow-api:ci-test .
+
+      - name: Lancer la suite de tests avec couverture
+        # --network host : le conteneur partage le réseau du runner, donc
+        # le service postgres (publié sur localhost:5432 par GitHub Actions)
+        # est joignable directement, comme sur la VM avec docker-compose.
+        run: |
+          docker run --rm --network host \
+            -e NODE_ENV=test \
+            -e DATABASE_URL="postgres://taskflow_user:change_me_in_production@localhost:5432/taskflow_test" \
+            taskflow-api:ci-test npm run test:coverage
+
+  # ============================================================
+  # Job 2 : construit la VRAIE image de production et vérifie qu'elle
+  # est réellement déployable - pas juste "que le code passe les tests".
+  # C'est ce job qui aurait attrapé le bug du Dockerfile où le dossier
+  # migrations/ n'était pas copié dans l'image finale.
+  # ============================================================
+  build-production-image:
+    name: Build & validation de l'image de production
+    needs: test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: taskflow_ci_check
+          POSTGRES_USER: taskflow_user
+          POSTGRES_PASSWORD: change_me_in_production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U taskflow_user -d taskflow_ci_check"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Construire l'image de production (stage "runner")
+        run: docker build --target runner -t taskflow-api:ci-runner .
+
+      - name: Vérifier que les migrations sont présentes ET exécutables dans l'image
+        run: |
+          docker run --rm --network host \
+            -e DATABASE_URL="postgres://taskflow_user:change_me_in_production@localhost:5432/taskflow_ci_check" \
+            taskflow-api:ci-runner npm run migrate:up
+
+      - name: Smoke test - le conteneur démarre et /health répond
+        run: |
+          docker run -d --name smoke --network host \
+            -e DATABASE_URL="postgres://taskflow_user:change_me_in_production@localhost:5432/taskflow_ci_check" \
+            taskflow-api:ci-runner
+
+          sleep 3
+          curl --fail http://localhost:3000/health
+
+          docker logs smoke
+          docker rm -f smoke
