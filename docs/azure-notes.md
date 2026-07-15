@@ -52,7 +52,7 @@ tous les deux :
 | 5432 (PostgreSQL) | La DB ne doit être joignable QUE depuis l'API, via le réseau Docker interne. On la bind d'ailleurs sur `127.0.0.1` dans `docker-compose.yml` en plus de ça (double protection). |
 
 ```bash
-# Sur la VM, configuration ufw équivalente :
+# Sur la VM, configuration ufw équivalente : 
 sudo ufw allow OpenSSH
 sudo ufw allow 3000/tcp   # temporaire, sera retiré au module 6
 sudo ufw enable
