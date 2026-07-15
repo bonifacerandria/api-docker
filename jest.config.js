@@ -1,6 +1,7 @@
 module.exports = {
   testEnvironment: 'node',
   setupFiles: ['<rootDir>/tests/setup/env.js'],
+  globalSetup: '<rootDir>/tests/setup/globalSetup.js',
 
   // Exécution séquentielle (--runInBand dans les scripts npm) : tous les
   // tests d'intégration partagent la même base taskflow_test. Des workers

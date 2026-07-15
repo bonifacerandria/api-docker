@@ -1,4 +1,5 @@
 services:
+
   api:
     build:
       context: .
@@ -9,20 +10,33 @@ services:
     env_file:
       - .env
     environment:
-      # Surcharge la valeur de .env (qui pointe vers "localhost" pour un usage
-      # hors Docker) : dans le réseau taskflow-net, PostgreSQL est joignable
-      # via le nom du service "db", pas "localhost".
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     ports:
-      # Depuis le module 6 : Nginx est l'unique point d'entrée public
-      # (443 -> proxy_pass vers 127.0.0.1:3000). Le port 3000 n'est donc
-      # plus exposé sur 0.0.0.0 : uniquement accessible depuis la VM elle-même.
       - "127.0.0.1:3000:3000"
     depends_on:
       db:
         condition: service_healthy
     networks:
       - taskflow-net
+
+  api-test:
+    build:
+      context: .
+      target: test
+    image: taskflow-api:test
+    container_name: taskflow-api-test
+    env_file:
+      - .env.test
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/taskflow_test
+      NODE_ENV: test
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - taskflow-net
+    profiles:
+      - test
 
   db:
     image: postgres:16-alpine
@@ -35,13 +49,9 @@ services:
     volumes:
       - taskflow-db-data:/var/lib/postgresql/data
     ports:
-      # IMPORTANT (VM Azure avec IP publique) : on bind sur 127.0.0.1 et non
-      # 0.0.0.0. Sans ça, le port 5432 serait potentiellement joignable
-      # depuis Internet dès qu'une règle NSG l'autoriserait par erreur.
-      # Cette restriction locale est une deuxième ligne de défense.
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL","pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,4 +65,3 @@ networks:
 
 volumes:
   taskflow-db-data:
-    driver: local
