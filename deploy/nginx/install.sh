@@ -22,7 +22,7 @@ ln -sf "${SITES_AVAILABLE}/${CONF_NAME}" "${SITES_ENABLED}/${CONF_NAME}"
 
 echo "==> Test de la configuration Nginx"
 nginx -t
-
+  
 echo "==> Rechargement de Nginx"
 systemctl reload nginx
 
