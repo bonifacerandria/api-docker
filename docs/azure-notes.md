@@ -52,13 +52,13 @@ tous les deux :
 | 5432 (PostgreSQL) | La DB ne doit être joignable QUE depuis l'API, via le réseau Docker interne. On la bind d'ailleurs sur `127.0.0.1` dans `docker-compose.yml` en plus de ça (double protection). |
 
 ```bash
-# Sur la VM, configuration ufw équivalente :
+# Sur la VM, configuration ufw équivalente : 
 sudo ufw allow OpenSSH
 sudo ufw allow 3000/tcp   # temporaire, sera retiré au module 6
 sudo ufw enable
 sudo ufw status
-```
-
+```  
+  
 ### Commandes Docker Compose à connaître
 
 ```bash
@@ -135,22 +135,25 @@ Pour revenir ensuite à l'API Node : `sudo ./deploy/nginx/install.sh`.
 
 ## Module 7 : Tests automatisés
 
-Les tests d'intégration ont besoin d'une base PostgreSQL de test, distincte
-de la base de dev/prod. Sur la VM (ou en local), avant de lancer les tests :
+Les tests tournent dans un conteneur Docker **dédié** (`api-test`, stage
+`test` du Dockerfile), séparé du conteneur de production — jamais les tests
+dans le conteneur `api` qui sert du vrai trafic.
 
+**Une seule fois** (première utilisation sur la VM) : créer la base de test.
 ```bash
 docker compose exec db psql -U taskflow_user -d postgres \
   -c "CREATE DATABASE taskflow_test OWNER taskflow_user;"
-
-cp .env.test.example .env.test   # ajuster si besoin
-npm run test:coverage
 ```
 
-**Ne jamais faire tourner les tests avec `DATABASE_URL` pointant vers la base
-de prod** : les tests d'intégration font un `TRUNCATE` complet entre chaque
-cas. Un garde-fou dans `tests/setup/env.js` bloque le lancement si
-`DATABASE_URL` ne contient pas le mot "test", mais ça reste une vérification
-naïve — reste vigilant sur le fichier `.env.test` utilisé.
+**À chaque fois qu'on veut lancer les tests :**
+```bash
+docker compose --profile test run --rm api-test npm run test:coverage
+```
+
+Les migrations sur `taskflow_test` sont maintenant appliquées automatiquement
+(via `tests/setup/globalSetup.js`) à chaque lancement — pas besoin de les
+rejouer à la main. Le conteneur `api-test` se supprime lui-même après
+exécution (`--rm`), il ne reste jamais en arrière-plan.
 
 ## À venir dans les prochains modules
 
