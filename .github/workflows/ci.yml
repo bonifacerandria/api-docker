@@ -19,7 +19,7 @@ jobs:
   # Job 1 : construit et fait tourner les tests dans l'image Docker
   # "test" - EXACTEMENT le même Dockerfile et le même conteneur que
   # celui utilisé en local et sur la VM (docker compose --profile test
-  # run --rm api-test). Si un test passe ici mais pas sur la VM (ou
+  # run --rm api-test). Si un test passe ici mais pas sur la VM (ou 
   # l'inverse), c'est le signe d'une vraie divergence d'environnement.
   # ============================================================
   test:
