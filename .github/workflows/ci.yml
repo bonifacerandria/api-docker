@@ -51,7 +51,7 @@ jobs:
       - name: Lancer la suite de tests avec couverture
         # --network host : le conteneur partage le réseau du runner, donc
         # le service postgres (publié sur localhost:5432 par GitHub Actions)
-        # est joignable directement, comme sur la VM avec docker-compose.
+        # est joignable directement, comme sur la VM avec docker-compose. 
         run: |
           docker run --rm --network host \
             -e NODE_ENV=test \
@@ -60,7 +60,7 @@ jobs:
 
   # ============================================================
   # Job 2 : construit la VRAIE image de production et vérifie qu'elle
-  # est réellement déployable - pas juste "que le code passe les tests".
+  # est réellement déployable - pas juste "que le code passe les tests".  
   # C'est ce job qui aurait attrapé le bug du Dockerfile où le dossier
   # migrations/ n'était pas copié dans l'image finale.
   # ============================================================
