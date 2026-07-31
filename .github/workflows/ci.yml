@@ -50,7 +50,7 @@ jobs:
 
       - name: Lancer la suite de tests avec couverture
         # --network host : le conteneur partage le réseau du runner, donc
-        # le service postgres (publié sur localhost:5432 par GitHub Actions)
+        # le service postgres (publié sur localhost:5432 par GitHub Actions)  
         # est joignable directement, comme sur la VM avec docker-compose. 
         run: |
           docker run --rm --network host \
