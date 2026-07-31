@@ -39,7 +39,7 @@ Types utilisés dans ce projet :
 | `test` | Ajout ou modification de tests |
 | `ci` | Changements liés à l'intégration continue |
 
-Exemples réels de ce projet :
+Exemples réels de ce projet :  
 ```
 feat(business-logic): ajouter les règles métier (suppression protégée, workflow de statut)
 docs: ajouter le README (architecture, endpoints, règles métier)
