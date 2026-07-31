@@ -49,7 +49,7 @@ jobs:
         run: docker build --target test -t taskflow-api:ci-test .
 
       - name: Lancer la suite de tests avec couverture
-        # --network host : le conteneur partage le réseau du runner, donc   
+        # --network host : le conteneur partage le réseau du runner, donc
         # le service postgres (publié sur localhost:5432 par GitHub Actions)    
         # est joignable directement, comme sur la VM avec docker-compose.     
         run: |

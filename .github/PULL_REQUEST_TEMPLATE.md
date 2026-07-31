@@ -6,7 +6,7 @@
 
 - [ ] `feat` — nouvelle fonctionnalité
 - [ ] `fix` — correction de bug
-- [ ] `refactor` — changement de code sans impact fonctionnel
+- [ ] `refactor` — changement de code sans impact fonctionnel  
 - [ ] `docs` — documentation uniquement
 - [ ] `chore` — maintenance (dépendances, config...)
 

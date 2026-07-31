@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # ============================================================
-# Dépendances complètes (dev + prod) 
+# Dépendances complètes (dev + prod)   
 # ============================================================
 FROM base AS dependencies
 
