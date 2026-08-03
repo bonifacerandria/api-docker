@@ -28,7 +28,7 @@ jobs:
   # donnée. Un mot de passe en clair n'est un risque QUE s'il protège
   # quelque chose de réel - ce qui n'est pas le cas ici. Les VRAIS
   # secrets (identifiants de registre au module 9, clés SSH...) passeront
-  # systématiquement par GitHub Actions Secrets, jamais en clair ici.
+  # systématiquement par GitHub Actions Secrets, jamais en clair ici. 
   # ============================================================
   test:
     name: Tests (image Docker "test")
