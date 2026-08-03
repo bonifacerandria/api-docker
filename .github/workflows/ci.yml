@@ -21,6 +21,14 @@ jobs:
   # celui utilisé en local et sur la VM (docker compose --profile test
   # run --rm api-test). Si un test passe ici mais pas sur la VM (ou
   # l'inverse), c'est le signe d'une vraie divergence d'environnement.
+  #
+  # Note sécurité : POSTGRES_PASSWORD ci-dessous n'est PAS un secret.
+  # Ce PostgreSQL est un conteneur éphémère, isolé sur le runner GitHub,
+  # jamais exposé à Internet, détruit à la fin du job, sans aucune vraie
+  # donnée. Un mot de passe en clair n'est un risque QUE s'il protège
+  # quelque chose de réel - ce qui n'est pas le cas ici. Les VRAIS
+  # secrets (identifiants de registre au module 9, clés SSH...) passeront
+  # systématiquement par GitHub Actions Secrets, jamais en clair ici.
   # ============================================================
   test:
     name: Tests (image Docker "test")
@@ -61,8 +69,8 @@ jobs:
   # ============================================================
   # Job 2 : construit la VRAIE image de production et vérifie qu'elle    
   # est réellement déployable - pas juste "que le code passe les tests".  
-  # C'est ce job qui aurait attrapé le bug du Dockerfile où le dossier
-  # migrations/ n'était pas copié dans l'image finale.
+  # C'est ce job qui aurait attrapé le bug du Dockerfile où le dossier  
+  # migrations/ n'était pas copié dans l'image finale. 
   # ============================================================
   build-production-image:
     name: Build & validation de l'image de production
