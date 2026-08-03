@@ -155,10 +155,31 @@ Les migrations sur `taskflow_test` sont maintenant appliquées automatiquement
 rejouer à la main. Le conteneur `api-test` se supprime lui-même après
 exécution (`--rm`), il ne reste jamais en arrière-plan.
 
+## Module 9 : Docker Registry (Docker Hub)
+
+Repo Docker Hub : `docker.io/<TON_USERNAME>/taskflow-api` (public — l'image ne
+contient aucun secret, tout est injecté au runtime).
+
+La CI pousse automatiquement l'image **uniquement sur un push vers `main`**
+(jamais sur une pull_request non mergée), avec deux tags :
+- `latest` : pratique, mais réécrit à chaque déploiement
+- `sha-xxxxxxx` : immuable, permet un rollback exact vers n'importe quel commit
+
+**Secrets requis dans GitHub** (`Settings → Secrets and variables → Actions`) :
+`DOCKERHUB_USERNAME` et `DOCKERHUB_TOKEN` (un Access Token Docker Hub scope
+"Read & Write", jamais le mot de passe du compte).
+
+**Pull manuel pour vérifier depuis la VM :**
+```bash
+docker pull docker.io/<TON_USERNAME>/taskflow-api:latest
+```
+
+Pense à te connecter avec `docker login` sur la VM aussi (`docker login -u
+<TON_USERNAME>`) : ça donne de meilleures limites de pull que l'accès anonyme.
+
 ## À venir dans les prochains modules
 
-- **Module 6** : Nginx en reverse proxy + Let's Encrypt (Certbot) sur ton domaine/IP publique. Le port 3000 sera fermé côté NSG.
-- **Module 10** : service `systemd` pour que Docker Compose redémarre automatiquement au boot de la VM.
+- **Module 10** : la VM ne construira plus l'image elle-même (`docker compose build`) — elle fera `docker pull` de l'image publiée par la CI. Service `systemd` pour redémarrer automatiquement au boot.
 - **Module 11-14** : Grafana/Prometheus ne seront PAS exposés publiquement — accès via tunnel SSH uniquement.
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.

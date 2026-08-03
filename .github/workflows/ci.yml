@@ -28,7 +28,7 @@ jobs:
   # donnée. Un mot de passe en clair n'est un risque QUE s'il protège
   # quelque chose de réel - ce qui n'est pas le cas ici. Les VRAIS
   # secrets (identifiants de registre au module 9, clés SSH...) passeront
-  # systématiquement par GitHub Actions Secrets, jamais en clair ici.
+  # systématiquement par GitHub Actions Secrets, jamais en clair ici. 
   # ============================================================
   test:
     name: Tests (image Docker "test")
@@ -116,3 +116,40 @@ jobs:
 
           docker logs smoke
           docker rm -f smoke
+
+      # ============================================================
+      # Publication sur Docker Hub - UNIQUEMENT sur un vrai push vers
+      # main (jamais sur une pull_request), pour ne jamais publier une
+      # image qui n'a pas encore été mergée. On repousse l'image DÉJÀ
+      # construite et validée ci-dessus (aucun rebuild) : ce qu'on
+      # publie est prouvé identique à ce qui vient de passer les tests
+      # de migration et le smoke test /health.
+      #
+      # Repo Docker Hub volontairement PUBLIC : l'image ne contient
+      # aucun secret (DATABASE_URL etc. sont injectés au runtime, jamais
+      # gravés dans l'image) -> pas de raison de la rendre privée, et ça
+      # évite la limite du plan gratuit (1 seul repo privé autorisé).
+      # ============================================================
+      - name: Se connecter à Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tagger et pousser l'image validée sur Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          IMAGE="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/taskflow-api"
+          SHA_TAG="sha-${GITHUB_SHA:0:7}"
+
+          # Deux tags : "latest" (pratique, mais mutable - toujours réécrit)
+          # et "sha-xxxxxxx" (immuable - sert de preuve d'audit et permet
+          # un rollback exact vers n'importe quel commit déjà déployé).
+          docker tag taskflow-api:ci-runner "$IMAGE:$SHA_TAG"
+          docker tag taskflow-api:ci-runner "$IMAGE:latest"
+
+          docker push "$IMAGE:$SHA_TAG"
+          docker push "$IMAGE:latest"
+
+          echo "Image publiée : $IMAGE:$SHA_TAG et $IMAGE:latest"
