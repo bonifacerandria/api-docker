@@ -128,7 +128,7 @@ jobs:
       # Repo Docker Hub volontairement PUBLIC : l'image ne contient
       # aucun secret (DATABASE_URL etc. sont injectés au runtime, jamais
       # gravés dans l'image) -> pas de raison de la rendre privée, et ça
-      # évite la limite du plan gratuit (1 seul repo privé autorisé).
+      # évite la limite du plan gratuit (1 seul repo privé autorisé). 
       # ============================================================
       - name: Se connecter à Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
