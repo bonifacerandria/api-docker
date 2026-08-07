@@ -153,3 +153,29 @@ jobs:
           docker push "$IMAGE:latest"
 
           echo "Image publiée : $IMAGE:$SHA_TAG et $IMAGE:latest"
+
+  # ============================================================
+  # Job 3 : déploie sur la VM Azure. Tourne SUR LA VM ELLE-MÊME (runner
+  # auto-hébergé, voir deploy/github-runner/README.md) - pas de SSH
+  # entrant depuis l'infrastructure GitHub, pas de clé privée à gérer
+  # comme secret. Déploie le tag sha-xxxxxxx qui vient d'être publié
+  # (pas "latest") : on sait EXACTEMENT quel commit tourne en prod.
+  # ============================================================
+  deploy:
+    name: Déployer sur la VM Azure
+    needs: build-production-image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, azure-prod-vm]
+
+    steps:
+      - name: Récupérer la dernière version du code de déploiement
+        run: |
+          cd "${{ vars.AZURE_VM_APP_PATH }}"
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Déployer le tag validé (rollback automatique si le healthcheck échoue)
+        run: |
+          cd "${{ vars.AZURE_VM_APP_PATH }}"
+          chmod +x deploy/deploy.sh
+          ./deploy/deploy.sh "sha-${GITHUB_SHA:0:7}"
