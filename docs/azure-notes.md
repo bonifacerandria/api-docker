@@ -177,9 +177,49 @@ docker pull docker.io/<TON_USERNAME>/taskflow-api:latest
 Pense à te connecter avec `docker login` sur la VM aussi (`docker login -u
 <TON_USERNAME>`) : ça donne de meilleures limites de pull que l'accès anonyme.
 
+## Module 10 : Déploiement sur Linux (CD complet)
+
+### Mise en place initiale (une seule fois)
+
+```bash
+# 1. Installer le runner GitHub Actions auto-hébergé
+#    (voir deploy/github-runner/README.md pour le détail)
+
+# 2. Renseigner .env avec DOCKERHUB_USERNAME
+echo "DOCKERHUB_USERNAME=<ton_username>" >> .env
+
+# 3. Créer la variable de dépôt AZURE_VM_APP_PATH sur GitHub
+#    Settings → Secrets and variables → Actions → Variables
+#    = chemin absolu du repo sur la VM (ex: /var/www/api-docker)
+
+# 4. Installer le service systemd
+sudo ./deploy/systemd/install.sh
+```
+
+### Ce qui se passe maintenant à chaque merge sur main
+
+1. Les tests tournent (job `test`)
+2. L'image de production est construite et validée (job `build-production-image`)
+3. L'image est publiée sur Docker Hub avec le tag `sha-xxxxxxx`
+4. Le runner auto-hébergé sur la VM récupère ce tag exact et le déploie
+5. Si le healthcheck échoue après déploiement → **rollback automatique**
+   vers le tag précédent, sans intervention manuelle
+
+### Déploiement manuel (si besoin, en dehors de la CI)
+
+```bash
+cd /var/www/api-docker   # ou le chemin de AZURE_VM_APP_PATH
+./deploy/deploy.sh sha-abc1234   # ou "latest"
+```
+
+### Vérifier le service au boot
+
+```bash
+systemctl status taskflow
+```
+
 ## À venir dans les prochains modules
 
-- **Module 10** : la VM ne construira plus l'image elle-même (`docker compose build`) — elle fera `docker pull` de l'image publiée par la CI. Service `systemd` pour redémarrer automatiquement au boot.
 - **Module 11-14** : Grafana/Prometheus ne seront PAS exposés publiquement — accès via tunnel SSH uniquement.
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.

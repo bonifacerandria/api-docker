@@ -1,0 +1,6 @@
+self-hosted-runner:
+  # Déclare le label personnalisé du runner auto-hébergé installé sur la VM
+  # Azure (voir deploy/github-runner/README.md), pour qu'actionlint ne le
+  # signale pas comme une faute de frappe sur "ubuntu-latest".
+  labels:
+    - azure-prod-vm

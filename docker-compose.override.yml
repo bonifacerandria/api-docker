@@ -1,0 +1,18 @@
+# docker-compose.override.yml
+#
+# Chargé AUTOMATIQUEMENT par `docker compose up` en local (dev) - Docker
+# Compose fusionne toujours docker-compose.yml + docker-compose.override.yml
+# par défaut quand aucun -f n'est précisé.
+#
+# En développement, on build l'image depuis le code local plutôt que de
+# dépendre de Docker Hub. Le script de déploiement (deploy/deploy.sh) sur la
+# VM utilise `docker compose -f docker-compose.yml` explicitement, ce qui
+# IGNORE ce fichier -> en production, c'est toujours l'image publiée par
+# la CI qui tourne, jamais un build local.
+
+services:
+  api:
+    build:
+      context: .
+      target: runner
+    image: taskflow-api:local

@@ -1,10 +1,11 @@
 services:
 
   api:
-    build:
-      context: .
-      target: runner
-    image: taskflow-api:local
+    # En production (VM), c'est TOUJOURS cette image publiée par la CI qui
+    # tourne, jamais un build local -> garantie que ce qui tourne est
+    # exactement ce qui a passé les tests et le smoke test en CI.
+    # IMAGE_TAG permet un rollback ciblé : IMAGE_TAG=sha-abc1234 docker compose ... up -d
+    image: docker.io/${DOCKERHUB_USERNAME}/taskflow-api:${IMAGE_TAG:-latest}
     container_name: taskflow-api
     restart: unless-stopped
     env_file:
