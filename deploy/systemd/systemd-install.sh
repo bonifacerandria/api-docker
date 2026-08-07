@@ -23,5 +23,5 @@ systemctl enable taskflow.service
 echo "==> Démarrage immédiat"
 systemctl start taskflow.service
 
-echo "✅ Service 'taskflow' installé et démarré."
+echo " Service 'taskflow' installé et démarré avec succès."
 echo "   Vérifier avec : systemctl status taskflow"
