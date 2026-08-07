@@ -159,13 +159,13 @@ jobs:
   # auto-hébergé, voir deploy/github-runner/README.md) - pas de SSH
   # entrant depuis l'infrastructure GitHub, pas de clé privée à gérer
   # comme secret. Déploie le tag sha-xxxxxxx qui vient d'être publié
-  # (pas "latest") : on sait EXACTEMENT quel commit tourne en prod.
+  # (pas "latest") : on sait EXACTEMENT quel commit tourne en prod. 
   # ============================================================
   deploy:
     name: Déployer sur la VM Azure
     needs: build-production-image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, azure-prod-vm]
+    runs-on: self-hosted
 
     steps:
       - name: Récupérer la dernière version du code de déploiement
