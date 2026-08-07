@@ -17,7 +17,7 @@ sed "s|__APP_PATH__|${APP_PATH}|g" "$UNIT_SRC" > "$UNIT_DEST"
 echo "==> Rechargement de systemd"
 systemctl daemon-reload
 
-echo "==> Activation au démarrage"
+echo "==> Activation aux démarrage"
 systemctl enable taskflow.service
 
 echo "==> Démarrage immédiat"
