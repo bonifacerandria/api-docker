@@ -1,6 +1,7 @@
 self-hosted-runner:
-  # Déclare le label personnalisé du runner auto-hébergé installé sur la VM
-  # Azure (voir deploy/github-runner/README.md), pour qu'actionlint ne le
-  # signale pas comme une faute de frappe sur "ubuntu-latest".
-  labels:
-    - azure-prod-vm
+  # Aucun label personnalisé utilisé actuellement (runs-on: self-hosted,
+  # suffisant avec un seul runner). Voir docs/known-issues.md pour l'incident
+  # qui a motivé cette simplification - un mismatch entre le label déclaré
+  # dans ci.yml et le label réellement enregistré côté GitHub bloquait le
+  # dispatch du job "deploy" sans qu'aucune erreur explicite ne soit levée.
+  labels: []

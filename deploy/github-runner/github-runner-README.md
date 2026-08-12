@@ -23,8 +23,17 @@ curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/rel
 tar xzf actions-runner-linux-x64.tar.gz
 
 # La commande exacte avec le token est donnée par GitHub, du type :
-./config.sh --url https://github.com/bonifacerandria/api-docker --token <TOKEN_TEMPORAIRE> --labels azure-prod-vm
+./config.sh --url https://github.com/bonifacerandria/api-docker --token <TOKEN_TEMPORAIRE>
 ```
+
+⚠️ **Erreur vécue à éviter** : ne PAS ajouter de label personnalisé (ex.
+`--labels azure-prod-vm`) sauf si `ci.yml` le référence EXACTEMENT à
+l'identique dans son `runs-on`. Un mismatch entre le label déclaré côté
+runner et celui attendu côté workflow ne produit **aucune erreur explicite**
+— le job reste juste bloqué indéfiniment sur "Waiting for a runner to pick
+up this job...", ce qui est très trompeur à déboguer (voir
+`docs/known-issues.md`). Avec un seul runner, `runs-on: self-hosted` tout
+seul suffit amplement — pas besoin de label personnalisé pour l'instant.
 
 2. Installer comme service systemd (pour qu'il survive à un reboot et tourne
    en arrière-plan) :
@@ -35,8 +44,9 @@ sudo ./svc.sh start
 ```
 
 3. Vérifier sur GitHub (`Settings` → `Actions` → `Runners`) que le runner
-   apparaît avec le statut **Idle** et le label `azure-prod-vm` — c'est ce
-   label que `ci.yml` cible (`runs-on: [self-hosted, azure-prod-vm]`).
+   apparaît avec le statut **Idle**, et que les labels affichés correspondent
+   EXACTEMENT à ce que `ci.yml` demande dans `runs-on` (actuellement juste
+   `self-hosted`).
 
 ## Utilisateur système du runner
 
