@@ -7,6 +7,7 @@ const config = require('./config/config');
 const routes = require('./routes');
 const errorHandler = require('./middlewares/errorHandler');
 const AppError = require('./utils/AppError');
+const { metricsMiddleware, metricsHandler } = require('./middlewares/metrics');
 
 const app = express();
 
@@ -17,6 +18,10 @@ app.use(express.json());
 if (config.env !== 'test') {
   app.use(morgan(config.logLevel));
 }
+
+// Mesure CHAQUE requête HTTP (y compris /health), avant les routes métier,
+// pour que rien n'échappe aux métriques.
+app.use(metricsMiddleware);
 
 // --- Health check ---
 // Indispensable dès maintenant : Docker (module 3) et Kubernetes (module 16)
@@ -29,6 +34,13 @@ app.get('/health', (req, res) => {
     env: config.env,
   });
 });
+
+// --- Métriques Prometheus ---
+// Volontairement PAS de préfixe /api/v1 ici (convention Prometheus standard).
+// Jamais exposé publiquement : Nginx bloque explicitement cette route en
+// externe (voir deploy/nginx/taskflow.conf), Prometheus la scrape en
+// interne via le réseau Docker, directement sur ce conteneur.
+app.get('/metrics', metricsHandler);
 
 // --- Routes métier ---
 app.use(config.apiPrefix, routes);

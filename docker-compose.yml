@@ -60,9 +60,31 @@ services:
     networks:
       - taskflow-net
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: taskflow-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - taskflow-prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    ports:
+      # JAMAIS 0.0.0.0 - accessible uniquement depuis la VM elle-même,
+      # jamais publiquement (voir docs/azure-notes.md pour l'accès via
+      # tunnel SSH). Nginx ne route rien vers Prometheus, volontairement.
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - api
+    networks:
+      - taskflow-net
+
 networks:
   taskflow-net:
     driver: bridge
 
 volumes:
   taskflow-db-data:
+  taskflow-prometheus-data:

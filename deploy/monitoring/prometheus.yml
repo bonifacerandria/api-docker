@@ -1,0 +1,23 @@
+# deploy/monitoring/prometheus.yml
+#
+# Scrape l'API directement via le réseau Docker interne (nom du service
+# "api", port 3000) - jamais via Nginx/Internet. Voir docker-compose.yml
+# pour le service "prometheus" et le réseau partagé.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: taskflow-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['api:3000']
+        labels:
+          app: taskflow-api
+          env: production
+
+  # Prometheus peut se scraper lui-même - pratique pour surveiller sa propre santé
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
