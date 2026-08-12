@@ -218,8 +218,29 @@ cd /var/www/api-docker   # ou le chemin de AZURE_VM_APP_PATH
 systemctl status taskflow
 ```
 
+## Module 11 : Monitoring (Prometheus)
+
+`/metrics` est bloqué en public via Nginx (404) — Prometheus le scrape
+uniquement en interne, directement sur le conteneur `api` via le réseau
+Docker (`api:3000`). Le port Prometheus (9090) est lié à `127.0.0.1`, jamais
+exposé publiquement.
+
+**Accéder à l'interface Prometheus depuis ton poste, sans jamais l'ouvrir
+publiquement :**
+
+```bash
+ssh -L 9090:127.0.0.1:9090 <user>@<IP_DE_LA_VM>
+# Puis ouvrir http://localhost:9090 dans ton navigateur local
+```
+
+**Vérifier que la cible est bien scrapée :**
+```
+http://localhost:9090/targets   (via le tunnel ci-dessus)
+```
+L'entrée `taskflow-api` doit apparaître en `UP`.
+
 ## À venir dans les prochains modules
 
-- **Module 11-14** : Grafana/Prometheus ne seront PAS exposés publiquement — accès via tunnel SSH uniquement.
+- **Module 12-14** : Grafana (visualisation) et Alertmanager/Loki ne seront pas non plus exposés publiquement — même principe de tunnel SSH.
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.
