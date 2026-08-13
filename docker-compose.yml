@@ -78,6 +78,70 @@ services:
       - "127.0.0.1:9090:9090"
     depends_on:
       - api
+      - postgres-exporter
+      - node-exporter
+      - cadvisor
+    networks:
+      - taskflow-net
+
+  # --- Métriques de la base de données ---
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: taskflow-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
+    ports:
+      - "127.0.0.1:9187:9187"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - taskflow-net
+
+  # --- Métriques de la VM elle-même (CPU, RAM, disque, réseau) ---
+  # Accède au système de fichiers de l'HÔTE en lecture seule, pas à celui
+  # du conteneur -> c'est la VM qui est mesurée, pas le conteneur node-exporter.
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: taskflow-node-exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      # Exclut les pseudo-filesystems qui polluent les métriques disque
+      # (sinon /proc, /sys etc. remontent comme de faux "disques").
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    ports:
+      - "127.0.0.1:9100:9100"
+    networks:
+      - taskflow-net
+
+  # --- Métriques PAR CONTENEUR (CPU/RAM/réseau de chaque conteneur) ---
+  # Accès étendu nécessaire (privileged, socket Docker) pour lire les
+  # cgroups de tous les conteneurs -> c'est le compromis standard de cAdvisor,
+  # jamais exposé publiquement comme les autres.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: taskflow-cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "127.0.0.1:8080:8080"
     networks:
       - taskflow-net
 
