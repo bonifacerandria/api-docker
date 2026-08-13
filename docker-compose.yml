@@ -145,6 +145,29 @@ services:
     networks:
       - taskflow-net
 
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: taskflow-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      # Personne ne doit pouvoir s'auto-créer un compte - accès réservé à
+      # l'admin défini ci-dessus (cohérent avec le reste de la stack : rien
+      # ici n'est censé être multi-utilisateur public).
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - taskflow-grafana-data:/var/lib/grafana
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      # Jamais 0.0.0.0, comme Prometheus - accès uniquement via tunnel SSH.
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - taskflow-net
+
 networks:
   taskflow-net:
     driver: bridge
@@ -152,3 +175,4 @@ networks:
 volumes:
   taskflow-db-data:
   taskflow-prometheus-data:
+  taskflow-grafana-data:
