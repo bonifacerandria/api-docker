@@ -1,0 +1,19 @@
+# deploy/monitoring/grafana/provisioning/datasources/datasource.yml
+#
+# Provisionne automatiquement Prometheus comme source de données au
+# démarrage de Grafana - pas de configuration manuelle via l'UI, tout est
+# reproductible et versionné (Infrastructure as Code, même pour les dashboards).
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    # "prometheus" = nom du service dans docker-compose.yml, résolu via le
+    # réseau Docker interne - jamais via Nginx/Internet, comme tout le reste
+    # de la stack de monitoring.
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

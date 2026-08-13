@@ -265,8 +265,28 @@ individuellement, mais sur une VM au dimensionnement modeste, vérifie la
 RAM/CPU disponible après leur ajout (`docker stats`) avant de considérer
 la question définitivement close.
 
+## Module 12 : Visualisation (Grafana)
+
+Provisionné automatiquement au démarrage : source de données Prometheus +
+dashboard "TaskFlow - Vue d'ensemble" déjà présents, aucun clic manuel requis.
+
+**Accès (jamais public, comme Prometheus) :**
+```bash
+ssh -L 3001:127.0.0.1:3001 <user>@<IP_DE_LA_VM>
+# Puis http://localhost:3001 dans ton navigateur local
+```
+
+Identifiants : ceux définis dans `.env` (`GRAFANA_ADMIN_USER` /
+`GRAFANA_ADMIN_PASSWORD`) — **change la valeur par défaut avant tout
+déploiement réel**, un mot de passe faible reste un problème même derrière
+un tunnel SSH.
+
+Le dashboard couvre les 4 couches déjà instrumentées au module 11 :
+requêtes/erreurs/latence de l'API, pool PostgreSQL, mémoire du process
+Node.js, CPU/RAM/disque de la VM, CPU/RAM par conteneur.
+
 ## À venir dans les prochains modules
 
-- **Module 12-14** : Grafana (visualisation) et Alertmanager/Loki ne seront pas non plus exposés publiquement — même principe de tunnel SSH.
+- **Module 13-14** : Alertmanager et Loki - même principe de tunnel SSH, jamais public.
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.

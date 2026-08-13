@@ -1,0 +1,17 @@
+# deploy/monitoring/grafana/provisioning/dashboards/dashboard.yml
+#
+# Indique à Grafana où trouver les fichiers JSON de dashboards à charger
+# automatiquement au démarrage (voir deploy/monitoring/grafana/dashboards/).
+
+apiVersion: 1
+
+providers:
+  - name: TaskFlow Dashboards
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
