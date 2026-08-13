@@ -1,7 +1,7 @@
 # deploy/monitoring/grafana/provisioning/dashboards/dashboard.yml
 #
 # Indique à Grafana où trouver les fichiers JSON de dashboards à charger
-# automatiquement au démarrage (voir deploy/monitoring/grafana/dashboards/).
+# automatiquement au démarrage (voir deploy/monitoring/grafana/dashboards/)., 
 
 apiVersion: 1
 
