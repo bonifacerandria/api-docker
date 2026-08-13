@@ -17,6 +17,27 @@ scrape_configs:
           app: taskflow-api
           env: production
 
+  - job_name: postgres
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          app: postgres
+          env: production
+
+  - job_name: node
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          app: vm-host
+          env: production
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          app: docker-containers
+          env: production
+
   # Prometheus peut se scraper lui-même - pratique pour surveiller sa propre santé
   - job_name: prometheus
     static_configs:

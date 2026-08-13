@@ -239,6 +239,32 @@ http://localhost:9090/targets   (via le tunnel ci-dessus)
 ```
 L'entrée `taskflow-api` doit apparaître en `UP`.
 
+### Exporters ajoutés : base de données, VM, conteneurs
+
+Le monitoring ne se limite jamais à l'application seule - trois exporters
+complètent la vue :
+
+| Exporter | Port (127.0.0.1 uniquement) | Mesure |
+|---|---|---|
+| `postgres-exporter` | 9187 | Connexions, transactions, taille des tables |
+| `node-exporter` | 9100 | CPU, RAM, disque, réseau **de la VM elle-même** |
+| `cadvisor` | 8080 | CPU/RAM/réseau **par conteneur Docker** |
+
+Tous accessibles via le même principe de tunnel SSH que Prometheus (changer
+juste le port local : `ssh -L 9100:127.0.0.1:9100 <user>@<IP_VM>`, etc.).
+
+⚠️ **Point de sécurité à assumer consciemment** : `cadvisor` tourne en
+`privileged: true` et monte `/var/run` en lecture-écriture - nécessaire
+pour lire les cgroups de tous les conteneurs, mais ça lui donne un accès
+bien plus large que les autres services de cette stack. C'est le compromis
+standard pour ce genre d'outil ; à ne pas dupliquer inutilement sur
+d'autres conteneurs qui n'en ont pas besoin.
+
+**Charge supplémentaire sur la VM** : ces trois exporters sont légers
+individuellement, mais sur une VM au dimensionnement modeste, vérifie la
+RAM/CPU disponible après leur ajout (`docker stats`) avant de considérer
+la question définitivement close.
+
 ## À venir dans les prochains modules
 
 - **Module 12-14** : Grafana (visualisation) et Alertmanager/Loki ne seront pas non plus exposés publiquement — même principe de tunnel SSH.
