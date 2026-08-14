@@ -285,8 +285,55 @@ Le dashboard couvre les 4 couches déjà instrumentées au module 11 :
 requêtes/erreurs/latence de l'API, pool PostgreSQL, mémoire du process
 Node.js, CPU/RAM/disque de la VM, CPU/RAM par conteneur.
 
+## Module 13 : Alerting (Alertmanager)
+
+### Mise en place initiale (une seule fois, avant le premier `docker compose up`)
+
+**1. Créer le fichier du mot de passe SMTP** (jamais dans Git) :
+```bash
+echo -n "le_vrai_mot_de_passe_smtp" > deploy/monitoring/alertmanager/secrets/smtp_password
+chmod 600 deploy/monitoring/alertmanager/secrets/smtp_password
+```
+⚠️ Si ce fichier n'existe pas AVANT le premier `docker compose up`, Docker
+va créer un DOSSIER vide à sa place au lieu d'un fichier, et Alertmanager
+plantera au démarrage. Toujours créer ce fichier en premier.
+
+**2. Éditer `deploy/monitoring/alertmanager/alertmanager.yml`** et remplacer
+les 3 valeurs marquées "À REMPLACER" (`smtp_smarthost`, `smtp_from`,
+`smtp_auth_username`) et l'adresse de destination des alertes
+(`receivers[0].email_configs[0].to`) avec les vraies infos de ton serveur SMTP.
+
+**3. Démarrer / recharger :**
+```bash
+docker compose up -d
+```
+
+### Accès à l'interface Alertmanager (jamais public)
+
+```bash
+ssh -L 9093:127.0.0.1:9093 <user>@<IP_DE_LA_VM>
+# Puis http://localhost:9093
+```
+
+### Vérifier que les règles sont bien chargées
+
+Sur `http://localhost:9090/rules` (via le tunnel Prometheus déjà en place),
+les 8 règles doivent apparaître, groupées en `taskflow-api` et `taskflow-infra`.
+
+### Tester l'envoi d'un email sans attendre une vraie panne
+
+```bash
+# Déclenche manuellement une alerte de test via l'API d'Alertmanager
+curl -X POST http://localhost:9093/api/v2/alerts -H "Content-Type: application/json" -d '[{
+  "labels": {"alertname": "TestManuel", "severity": "warning"},
+  "annotations": {"summary": "Test d'\''envoi email"},
+  "startsAt": "'"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"'"
+}]'
+```
+Un email doit arriver dans les ~30 secondes (`group_wait`).
+
 ## À venir dans les prochains modules
 
-- **Module 13-14** : Alertmanager et Loki - même principe de tunnel SSH, jamais public.
+- **Module 14** : Loki (logs centralisés) - même principe de tunnel SSH, jamais public.
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.

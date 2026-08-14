@@ -1,0 +1,92 @@
+# deploy/monitoring/rules/alerts.yml
+#
+# Règles d'alerte basées sur les métriques exposées au module 11 (API,
+# PostgreSQL, VM, conteneurs). Chaque règle a un "for" - le temps que la
+# condition doit rester vraie avant de déclencher - pour éviter les fausses
+# alertes sur un pic transitoire de quelques secondes.
+
+groups:
+  - name: taskflow-api
+    rules:
+      - alert: APIDown
+        expr: up{job="taskflow-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "L'API TaskFlow ne répond plus"
+          description: "Prometheus n'arrive plus à scraper {{ $labels.instance }} depuis au moins 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(taskflow_http_requests_total{status_code=~"5.."}[5m]))
+            /
+            sum(rate(taskflow_http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taux d'erreur HTTP élevé ({{ $value | humanizePercentage }})"
+          description: "Plus de 5% des requêtes échouent en erreur serveur (5xx) depuis 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(taskflow_http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence p95 élevée ({{ $value | humanizeDuration }})"
+          description: "95% des requêtes mettent plus d'1 seconde à répondre depuis 5 minutes."
+
+      - alert: DBPoolSaturated
+        expr: taskflow_db_pool_connections{state="waiting"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Le pool de connexions PostgreSQL est saturé"
+          description: "Des requêtes attendent une connexion disponible depuis 5 minutes - le pool est probablement trop petit ou une requête bloque les autres."
+
+  - name: taskflow-infra
+    rules:
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "postgres-exporter ne répond plus"
+          description: "Impossible de scraper les métriques PostgreSQL depuis 1 minute - la base est peut-être down."
+
+      - alert: VMDiskAlmostFull
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.10
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disque de la VM presque plein ({{ $value | humanizePercentage }} restant)"
+          description: "Moins de 10% d'espace disque libre sur / depuis 10 minutes."
+
+      - alert: VMMemoryAlmostFull
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAM de la VM presque saturée ({{ $value | humanizePercentage }} disponible)"
+          description: "Moins de 10% de RAM disponible depuis 10 minutes."
+
+      - alert: VMHighCPU
+        expr: |
+          100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU de la VM très sollicité ({{ $value | humanize }}%)"
+          description: "Utilisation CPU moyenne au-dessus de 90% depuis 10 minutes."
