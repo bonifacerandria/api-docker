@@ -7,9 +7,9 @@
 
 global:
   resolve_timeout: 5m
-  smtp_smarthost: 'smtp.example.com:587'     # À REMPLACER (ex: smtp.mondomaine.com:587)
-  smtp_from: 'alerts@example.com'            # À REMPLACER
-  smtp_auth_username: 'alerts@example.com'   # À REMPLACER (souvent identique à smtp_from)
+  smtp_smarthost: 'mail.smtp2go.com:587'     # À REMPLACER (ex: smtp.mondomaine.com:587)
+  smtp_from: 'bmoi@bmoi.mg'            # À REMPLACER
+  smtp_auth_username: 'bmoi@bmoi.mg'   # À REMPLACER (souvent identique à smtp_from)
   smtp_auth_password_file: /etc/alertmanager/secrets/smtp_password
   smtp_require_tls: true
 
@@ -34,7 +34,7 @@ route:
 receivers:
   - name: email-default
     email_configs:
-      - to: 'destinataire@example.com'   # À REMPLACER
+      - to: 'randrianirinaboniface@gmail.com'   # À REMPLACER
         send_resolved: true
 
 # Évite le bruit : si l'API est complètement down (critical), inutile de
