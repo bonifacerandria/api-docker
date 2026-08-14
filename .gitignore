@@ -6,3 +6,6 @@ coverage/
 *.log
 .DS_Store
 dist/
+
+# Secrets Alertmanager - jamais dans Git (voir le README à côté pour la procédure)
+deploy/monitoring/alertmanager/secrets/smtp_password

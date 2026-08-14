@@ -66,6 +66,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/rules:/etc/prometheus/rules:ro
       - taskflow-prometheus-data:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -81,6 +82,24 @@ services:
       - postgres-exporter
       - node-exporter
       - cadvisor
+      - alertmanager
+    networks:
+      - taskflow-net
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: taskflow-alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./deploy/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./deploy/monitoring/alertmanager/secrets/smtp_password:/etc/alertmanager/secrets/smtp_password:ro
+      - taskflow-alertmanager-data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      # Jamais public, comme le reste de la stack de monitoring.
+      - "127.0.0.1:9093:9093"
     networks:
       - taskflow-net
 
@@ -176,3 +195,4 @@ volumes:
   taskflow-db-data:
   taskflow-prometheus-data:
   taskflow-grafana-data:
+  taskflow-alertmanager-data:

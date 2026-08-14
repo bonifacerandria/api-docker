@@ -1,0 +1,51 @@
+# deploy/monitoring/alertmanager/alertmanager.yml
+#
+# ⚠️ À PERSONNALISER avant le premier déploiement : les 3 valeurs marquées
+# "À REMPLACER" ci-dessous, avec les vraies infos de ton serveur SMTP.
+# Le mot de passe, lui, ne va JAMAIS ici - voir secrets/smtp_password
+# (fichier volontairement absent de Git, voir .gitignore).
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.example.com:587'     # À REMPLACER (ex: smtp.mondomaine.com:587)
+  smtp_from: 'alerts@example.com'            # À REMPLACER
+  smtp_auth_username: 'alerts@example.com'   # À REMPLACER (souvent identique à smtp_from)
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp_password
+  smtp_require_tls: true
+
+route:
+  receiver: email-default
+  # Regroupe les alertes similaires dans un seul email plutôt qu'un email
+  # par alerte individuelle - évite le spam si 5 métriques dérivent en même
+  # temps à cause d'une seule vraie cause (ex: VM à court de RAM).
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # Les alertes critiques sont ré-envoyées plus souvent tant qu'elles
+    # persistent - moins de risque de les oublier dans une boîte mail chargée.
+    - match:
+        severity: critical
+      receiver: email-default
+      repeat_interval: 1h
+
+receivers:
+  - name: email-default
+    email_configs:
+      - to: 'destinataire@example.com'   # À REMPLACER
+        send_resolved: true
+
+# Évite le bruit : si l'API est complètement down (critical), inutile de
+# recevoir EN PLUS toutes les alertes "warning" qui ne sont que des
+# conséquences de cette même panne (latence élevée, pool DB saturé...).
+# equal: [] volontairement vide - avec une seule instance de l'API sur
+# cette VM, pas besoin de label partagé pour cibler la bonne alerte :
+# tant qu'APIDown est active, tous les warnings sont mis en sourdine.
+inhibit_rules:
+  - source_match:
+      alertname: APIDown
+    target_match:
+      severity: warning
+    equal: []
