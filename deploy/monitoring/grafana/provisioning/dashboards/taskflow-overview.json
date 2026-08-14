@@ -150,6 +150,23 @@
         }
       ],
       "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+    },
+    {
+      "id": 11,
+      "title": "Logs récents - erreurs (tous conteneurs)",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{container=~\"taskflow.*\"} |~ \"(?i)error\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "sortOrder": "Descending"
+      }
     }
   ]
 }

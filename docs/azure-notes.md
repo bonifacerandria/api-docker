@@ -292,11 +292,17 @@ Node.js, CPU/RAM/disque de la VM, CPU/RAM par conteneur.
 **1. Créer le fichier du mot de passe SMTP** (jamais dans Git) :
 ```bash
 echo -n "le_vrai_mot_de_passe_smtp" > deploy/monitoring/alertmanager/secrets/smtp_password
-chmod 600 deploy/monitoring/alertmanager/secrets/smtp_password
+chmod 644 deploy/monitoring/alertmanager/secrets/smtp_password
 ```
 ⚠️ Si ce fichier n'existe pas AVANT le premier `docker compose up`, Docker
 va créer un DOSSIER vide à sa place au lieu d'un fichier, et Alertmanager
 plantera au démarrage. Toujours créer ce fichier en premier.
+
+⚠️ **Pas `chmod 600`** : le conteneur lit ce fichier avec un utilisateur
+interne différent de ton utilisateur VM (souvent `nobody`) - `600` le rend
+illisible pour lui, et l'échec d'authentification SMTP qui en résulte
+n'est pas forcément explicite ailleurs que dans les logs du conteneur
+(`docker compose logs alertmanager`). Vécu et corrigé le 13 août 2026.
 
 **2. Éditer `deploy/monitoring/alertmanager/alertmanager.yml`** et remplacer
 les 3 valeurs marquées "À REMPLACER" (`smtp_smarthost`, `smtp_from`,
@@ -332,8 +338,36 @@ curl -X POST http://localhost:9093/api/v2/alerts -H "Content-Type: application/j
 ```
 Un email doit arriver dans les ~30 secondes (`group_wait`).
 
+## Module 14 : Centralisation des logs (Loki)
+
+Collecte automatique des logs de **tous** les conteneurs (via Promtail +
+Docker service discovery) - aucune liste à maintenir à la main, un nouveau
+service ajouté au `docker-compose.yml` est collecté sans y retoucher.
+
+### Accès (jamais public)
+
+Pas d'interface web dédiée pour Loki - tout se consulte **depuis Grafana**,
+déjà accessible via le tunnel SSH existant (port 3001) :
+- Menu **Explore** → sélectionner la source de données **Loki**
+- Ou directement dans le dashboard "TaskFlow - Vue d'ensemble", panneau
+  "Logs récents - erreurs" en bas de page
+
+### Exemples de requêtes LogQL utiles (dans Explore)
+
+```logql
+{container="taskflow-api"}                        # tous les logs de l'API
+{container="taskflow-api"} |~ "(?i)error"          # uniquement les erreurs
+{container=~"taskflow.*"} |= "500"                 # chercher "500" partout
+```
+
+### Rétention
+
+15 jours (comme Prometheus), appliquée via le `compactor` de Loki - sans
+lui, `retention_period` seul ne suffit pas à effacer les vieux logs
+(piège classique avec le store filesystem/TSDB).
+
 ## À venir dans les prochains modules
 
-- **Module 14** : Loki (logs centralisés) - même principe de tunnel SSH, jamais public.
+- **Module 15** : Sécurité (Trivy, Dependabot...).
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.

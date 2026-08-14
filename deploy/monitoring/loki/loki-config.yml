@@ -1,0 +1,42 @@
+# deploy/monitoring/loki/loki-config.yml
+#
+# Configuration "single-binary" - suffisant pour une seule VM. Pas besoin
+# de la complexité d'un déploiement Loki distribué (S3, Cassandra...) ici.
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 15d
+
+# Le compactor est nécessaire pour que retention_period soit RÉELLEMENT
+# appliqué (sans lui, les vieux logs s'accumulent indéfiniment malgré le
+# réglage ci-dessus - piège fréquent avec le store filesystem/TSDB).
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  delete_request_store: filesystem

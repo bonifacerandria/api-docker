@@ -1,8 +1,8 @@
 # deploy/monitoring/grafana/provisioning/datasources/datasource.yml
 #
-# Provisionne automatiquement Prometheus comme source de données au
-# démarrage de Grafana - pas de configuration manuelle via l'UI, tout est
-# reproductible et versionné (Infrastructure as Code, même pour les dashboards).
+# Provisionne automatiquement Prometheus ET Loki comme sources de données
+# au démarrage de Grafana - pas de configuration manuelle via l'UI, tout
+# est reproductible et versionné (Infrastructure as Code, même pour les dashboards).
 
 apiVersion: 1
 
@@ -16,4 +16,12 @@ datasources:
     # de la stack de monitoring.
     url: http://prometheus:9090
     isDefault: true
+    editable: false
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
     editable: false
