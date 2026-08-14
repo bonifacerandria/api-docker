@@ -184,6 +184,42 @@ services:
       - "127.0.0.1:3001:3000"
     depends_on:
       - prometheus
+      - loki
+    networks:
+      - taskflow-net
+
+  # --- Stockage centralisé des logs (module 14) ---
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: taskflow-loki
+    restart: unless-stopped
+    volumes:
+      - ./deploy/monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - taskflow-loki-data:/loki
+    command:
+      - -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "127.0.0.1:3100:3100"
+    networks:
+      - taskflow-net
+
+  # --- Collecteur : lit les logs de TOUS les conteneurs et les pousse vers Loki ---
+  # Accès à docker.sock nécessaire pour découvrir automatiquement les
+  # conteneurs (même compromis assumé que cAdvisor au module 11) - lecture
+  # seule, jamais exposé publiquement.
+  promtail:
+    image: grafana/promtail:3.2.1
+    container_name: taskflow-promtail
+    restart: unless-stopped
+    volumes:
+      - ./deploy/monitoring/loki/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - taskflow-promtail-positions:/run/promtail
+    command:
+      - -config.file=/etc/promtail/promtail-config.yml
+    depends_on:
+      - loki
     networks:
       - taskflow-net
 
@@ -196,3 +232,5 @@ volumes:
   taskflow-prometheus-data:
   taskflow-grafana-data:
   taskflow-alertmanager-data:
+  taskflow-loki-data:
+  taskflow-promtail-positions:
