@@ -366,8 +366,51 @@ déjà accessible via le tunnel SSH existant (port 3001) :
 lui, `retention_period` seul ne suffit pas à effacer les vieux logs
 (piège classique avec le store filesystem/TSDB).
 
+### Délai observé au premier démarrage
+
+La datasource Loki peut mettre 2 à 5 minutes à devenir utilisable dans
+Grafana après un `docker compose up -d` (constaté le 14 août 2026),
+probablement le temps que Loki initialise son ring interne et son
+compactor, combiné au cycle de rafraîchissement du provisioning Grafana
+(30s). Pas d'action corrective nécessaire - patienter avant de conclure à
+un problème de configuration. À reprendre plus sérieusement seulement si
+ça dépasse largement 5 minutes ou empêche complètement l'usage.
+
+## Module 15 : Sécurité (Trivy, Dependabot)
+
+### ⚠️ Pourquoi on n'utilise pas `aquasecurity/trivy-action`
+
+Cette action GitHub, très largement utilisée pour scanner les images
+Docker, **a été compromise le 19 mars 2026** (CVE-2026-33634,
+GHSA-69fq-xp46-6x23). Un attaquant a force-push 76 des 77 tags de version
+vers du code qui volait les secrets du workflow (tokens, mots de passe...)
+avant de lancer le vrai scan Trivy - le pipeline semblait tourner
+normalement pendant que les secrets étaient exfiltrés.
+
+**Ce qu'on fait à la place** : le binaire Trivy officiel téléchargé
+directement, épinglé sur la version `v0.69.3` (publiée avant l'incident,
+release GitHub "Immutable" + signature vérifiée), avec vérification du
+checksum SHA256 avant toute exécution — voir `.github/workflows/ci.yml`.
+
+**Si tu mets à jour cette version un jour** : ne prends jamais une version
+sans vérifier d'abord sur https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23
+qu'elle est postérieure à la remédiation complète, et récupère le nouveau
+checksum SHA256 officiel avant de l'épingler.
+
+### Dependabot
+
+Ouvre automatiquement une PR chaque semaine pour les dépendances npm, la
+version de l'image de base dans le `Dockerfile`, et les versions des
+GitHub Actions utilisées - rien n'est mergé automatiquement, la CI
+(module 8) valide chaque PR normalement.
+
+### Où voir les résultats des scans
+
+`Repo GitHub → onglet Security → Code scanning` - les rapports Trivy
+(image de production + dépendances/config) y apparaissent après chaque run
+CI, classés par sévérité.
+
 ## À venir dans les prochains modules
 
-- **Module 15** : Sécurité (Trivy, Dependabot...).
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.

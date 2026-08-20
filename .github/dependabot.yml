@@ -1,0 +1,44 @@
+# .github/dependabot.yml
+#
+# Ouvre automatiquement une PR quand une dépendance a une mise à jour
+# disponible (sécurité ou version) - la CI (module 8) valide chaque PR
+# exactement comme une PR humaine, rien n'est mergé automatiquement.
+
+version: 2
+updates:
+  # Dépendances npm (package.json / package-lock.json)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # Groupe les mises à jour mineures/patch ensemble pour éviter une
+    # avalanche de PR séparées à review une par une chaque semaine.
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Image de base dans le Dockerfile (node:20-alpine)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(docker)"
+
+  # Versions des actions utilisées dans .github/workflows/ (ex: actions/checkout@v4)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(ci)"
