@@ -66,7 +66,7 @@ jobs:
             --ignore-unfixed
 
       - name: Publier le rapport dans l'onglet Security de GitHub
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs-results.sarif
           category: trivy-fs
@@ -221,7 +221,7 @@ jobs:
             --ignore-unfixed
 
       - name: Publier le rapport dans l'onglet Security de GitHub
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
 
