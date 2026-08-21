@@ -366,49 +366,38 @@ déjà accessible via le tunnel SSH existant (port 3001) :
 lui, `retention_period` seul ne suffit pas à effacer les vieux logs
 (piège classique avec le store filesystem/TSDB).
 
-### Délai observé au premier démarrage
-
-La datasource Loki peut mettre 2 à 5 minutes à devenir utilisable dans
-Grafana après un `docker compose up -d` (constaté le 14 août 2026),
-probablement le temps que Loki initialise son ring interne et son
-compactor, combiné au cycle de rafraîchissement du provisioning Grafana
-(30s). Pas d'action corrective nécessaire - patienter avant de conclure à
-un problème de configuration. À reprendre plus sérieusement seulement si
-ça dépasse largement 5 minutes ou empêche complètement l'usage.
-
 ## Module 15 : Sécurité (Trivy, Dependabot)
 
 ### ⚠️ Pourquoi on n'utilise pas `aquasecurity/trivy-action`
 
-Cette action GitHub, très largement utilisée pour scanner les images
-Docker, **a été compromise le 19 mars 2026** (CVE-2026-33634,
-GHSA-69fq-xp46-6x23). Un attaquant a force-push 76 des 77 tags de version
-vers du code qui volait les secrets du workflow (tokens, mots de passe...)
-avant de lancer le vrai scan Trivy - le pipeline semblait tourner
-normalement pendant que les secrets étaient exfiltrés.
-
-**Ce qu'on fait à la place** : le binaire Trivy officiel téléchargé
-directement, épinglé sur la version `v0.69.3` (publiée avant l'incident,
-release GitHub "Immutable" + signature vérifiée), avec vérification du
-checksum SHA256 avant toute exécution — voir `.github/workflows/ci.yml`.
-
-**Si tu mets à jour cette version un jour** : ne prends jamais une version
-sans vérifier d'abord sur https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23
-qu'elle est postérieure à la remédiation complète, et récupère le nouveau
-checksum SHA256 officiel avant de l'épingler.
+Cette action GitHub a été compromise le 19 mars 2026 (CVE-2026-33634,
+GHSA-69fq-xp46-6x23) - 76 des 77 tags de version force-pushés vers du code
+volant les secrets du workflow avant de lancer le vrai scan. On utilise à
+la place le binaire Trivy officiel, épinglé sur `v0.69.3` (pré-incident,
+release immutable, signature vérifiée), avec vérification de checksum
+SHA256 avant toute exécution - voir `.github/workflows/ci.yml`.
 
 ### Dependabot
 
-Ouvre automatiquement une PR chaque semaine pour les dépendances npm, la
-version de l'image de base dans le `Dockerfile`, et les versions des
-GitHub Actions utilisées - rien n'est mergé automatiquement, la CI
-(module 8) valide chaque PR normalement.
+PR automatique hebdomadaire pour npm, l'image de base Docker, et les
+GitHub Actions - jamais mergé automatiquement, la CI valide chaque PR.
 
 ### Où voir les résultats des scans
 
-`Repo GitHub → onglet Security → Code scanning` - les rapports Trivy
-(image de production + dépendances/config) y apparaissent après chaque run
-CI, classés par sévérité.
+`Repo GitHub → onglet Security → Code scanning`.
+
+### Vulnérabilité corrigée : CVE-2026-59873 (tar, dans l'image de base)
+
+Trivy a bloqué la CI en trouvant `tar@6.2.1` (CRITICAL, DoS via bombe gzip,
+corrigé en 7.5.19) - **absente de notre `package-lock.json`** : c'est le
+`npm` embarqué dans l'image de base `node:20-alpine` qui dépend d'un `tar`
+vulnérable en interne, pas une dépendance de l'app elle-même. Trivy scanne
+tout le système de fichiers de l'image, pas seulement nos dépendances.
+
+Corrigé dans le `Dockerfile` (stage `runner`) en mettant à jour npm vers
+`12.0.2`, qui embarque `tar@^7.5.19`. npm reste nécessaire au runtime ici
+(les migrations tournent via `npm run migrate:up` en prod), donc pas
+question de le retirer de l'image.
 
 ## À venir dans les prochains modules
 
