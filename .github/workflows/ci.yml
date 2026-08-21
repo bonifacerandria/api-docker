@@ -16,6 +16,62 @@ concurrency:
 
 jobs:
   # ============================================================
+  # Job 0 : scan léger, ne construit rien - retour rapide sur chaque PR.
+  # Deux choses différentes de la vraie image : les dépendances npm
+  # (package-lock.json) et les erreurs de configuration dans le
+  # Dockerfile/docker-compose.yml (ex: utilisateur root, secret en clair
+  # oublié...). Jamais bloquant : sert d'alerte précoce, le vrai
+  # gatekeeper reste le scan d'image du job suivant.
+  # ============================================================
+  security-scan:
+    name: Scan de sécurité (dépendances + config)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      # Voir le commentaire détaillé dans le job build-production-image :
+      # aquasecurity/trivy-action a été compromis le 19 mars 2026
+      # (CVE-2026-33634) - on utilise le binaire officiel vérifié par
+      # checksum à la place, jamais l'action tierce.
+      - name: Installer Trivy (binaire vérifié par checksum, version pré-incident)
+        run: |
+          TRIVY_VERSION=0.69.3
+          EXPECTED_SHA256=1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75
+
+          curl -sL -o trivy.tar.gz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+
+          ACTUAL_SHA256=$(sha256sum trivy.tar.gz | cut -d' ' -f1)
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "❌ Checksum invalide - binaire potentiellement compromis. Attendu: $EXPECTED_SHA256, obtenu: $ACTUAL_SHA256"
+            exit 1
+          fi
+          echo "✅ Checksum vérifié"
+
+          tar xzf trivy.tar.gz trivy
+          chmod +x trivy
+          sudo mv trivy /usr/local/bin/trivy
+          trivy --version
+
+      - name: Scanner les dépendances npm et la configuration Docker
+        run: |
+          trivy fs . \
+            --format sarif \
+            --output trivy-fs-results.sarif \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed
+
+      - name: Publier le rapport dans l'onglet Security de GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs-results.sarif
+          category: trivy-fs
+
+  # ============================================================
   # Job 1 : construit et fait tourner les tests dans l'image Docker
   # "test" - EXACTEMENT le même Dockerfile et le même conteneur que
   # celui utilisé en local et sur la VM (docker compose --profile test
@@ -76,6 +132,9 @@ jobs:
     name: Build & validation de l'image de production
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # nécessaire pour publier le rapport Trivy (SARIF)
 
     services:
       postgres:
@@ -116,6 +175,63 @@ jobs:
 
           docker logs smoke
           docker rm -f smoke
+
+      # ============================================================
+      # Sécurité (module 15) : scanne l'image AVANT de la publier -
+      # jamais après.
+      #
+      # ⚠️ On n'utilise PAS l'action "aquasecurity/trivy-action" : elle a
+      # été compromise le 19 mars 2026 (CVE-2026-33634, GHSA-69fq-xp46-6x23)
+      # - un attaquant a force-push 76 des 77 tags de version vers du code
+      # volant les secrets du workflow AVANT de lancer le vrai scan (le
+      # pipeline semblait fonctionner normalement pendant le vol). Un
+      # simple pin par tag (@0.28.0) n'aurait pas protégé contre ça,
+      # puisque c'est le TAG lui-même qui a été redirigé.
+      #
+      # À la place : le binaire Trivy officiel, téléchargé directement,
+      # épinglé sur la version v0.69.3 (publiée le 3 mars 2026, avant
+      # l'incident, release "Immutable" + signature GitHub vérifiée), et
+      # son checksum SHA256 vérifié avant toute exécution.
+      # ============================================================
+      - name: Installer Trivy (binaire vérifié par checksum, version pré-incident)
+        run: |
+          TRIVY_VERSION=0.69.3
+          EXPECTED_SHA256=1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75
+
+          curl -sL -o trivy.tar.gz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+
+          ACTUAL_SHA256=$(sha256sum trivy.tar.gz | cut -d' ' -f1)
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "❌ Checksum invalide - binaire potentiellement compromis. Attendu: $EXPECTED_SHA256, obtenu: $ACTUAL_SHA256"
+            exit 1
+          fi
+          echo "✅ Checksum vérifié"
+
+          tar xzf trivy.tar.gz trivy
+          chmod +x trivy
+          sudo mv trivy /usr/local/bin/trivy
+          trivy --version
+
+      - name: Scanner l'image (rapport complet, non bloquant)
+        run: |
+          trivy image taskflow-api:ci-runner \
+            --format sarif \
+            --output trivy-results.sarif \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed
+
+      - name: Publier le rapport dans l'onglet Security de GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Bloquer la publication si une vulnérabilité CRITIQUE (avec correctif) est trouvée
+        run: |
+          trivy image taskflow-api:ci-runner \
+            --format table \
+            --severity CRITICAL \
+            --exit-code 1 \
+            --ignore-unfixed
 
       # ============================================================
       # Publication sur Docker Hub - UNIQUEMENT sur un vrai push vers

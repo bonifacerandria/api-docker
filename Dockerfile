@@ -39,13 +39,23 @@ USER root
 CMD ["npm","test"]
 
 # ============================================================
-# Stage PRODUCTION gff
+# Stage PRODUCTION
 # ============================================================
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Corrige CVE-2026-59873 (tar < 7.5.19, DoS via bombe gzip) : le npm
+# embarqué dans l'image de base node:20-alpine dépend d'une version
+# vulnérable de "tar" en interne (jamais dans NOTRE package-lock.json -
+# Trivy scanne bien tout le système de fichiers de l'image, pas juste nos
+# dépendances applicatives). npm est nécessaire au runtime ici (migrations
+# exécutées via `npm run migrate:up` en prod), donc pas question de le
+# retirer - on le met simplement à jour vers une version qui embarque un
+# tar corrigé.
+RUN npm install -g npm@12.0.2
 
 RUN addgroup -S nodejs && adduser -S taskflow -G nodejs
 

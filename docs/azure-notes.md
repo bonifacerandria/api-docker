@@ -366,8 +366,40 @@ déjà accessible via le tunnel SSH existant (port 3001) :
 lui, `retention_period` seul ne suffit pas à effacer les vieux logs
 (piège classique avec le store filesystem/TSDB).
 
+## Module 15 : Sécurité (Trivy, Dependabot)
+
+### ⚠️ Pourquoi on n'utilise pas `aquasecurity/trivy-action`
+
+Cette action GitHub a été compromise le 19 mars 2026 (CVE-2026-33634,
+GHSA-69fq-xp46-6x23) - 76 des 77 tags de version force-pushés vers du code
+volant les secrets du workflow avant de lancer le vrai scan. On utilise à
+la place le binaire Trivy officiel, épinglé sur `v0.69.3` (pré-incident,
+release immutable, signature vérifiée), avec vérification de checksum
+SHA256 avant toute exécution - voir `.github/workflows/ci.yml`.
+
+### Dependabot
+
+PR automatique hebdomadaire pour npm, l'image de base Docker, et les
+GitHub Actions - jamais mergé automatiquement, la CI valide chaque PR.
+
+### Où voir les résultats des scans
+
+`Repo GitHub → onglet Security → Code scanning`.
+
+### Vulnérabilité corrigée : CVE-2026-59873 (tar, dans l'image de base)
+
+Trivy a bloqué la CI en trouvant `tar@6.2.1` (CRITICAL, DoS via bombe gzip,
+corrigé en 7.5.19) - **absente de notre `package-lock.json`** : c'est le
+`npm` embarqué dans l'image de base `node:20-alpine` qui dépend d'un `tar`
+vulnérable en interne, pas une dépendance de l'app elle-même. Trivy scanne
+tout le système de fichiers de l'image, pas seulement nos dépendances.
+
+Corrigé dans le `Dockerfile` (stage `runner`) en mettant à jour npm vers
+`12.0.2`, qui embarque `tar@^7.5.19`. npm reste nécessaire au runtime ici
+(les migrations tournent via `npm run migrate:up` en prod), donc pas
+question de le retirer de l'image.
+
 ## À venir dans les prochains modules
 
-- **Module 15** : Sécurité (Trivy, Dependabot...).
 - **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
 - **Module 19** : Terraform avec le provider `azurerm`.
