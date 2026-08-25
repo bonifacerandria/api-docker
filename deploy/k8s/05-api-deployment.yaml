@@ -1,0 +1,59 @@
+# deploy/k8s/05-api-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskflow-api
+  namespace: taskflow
+spec:
+  # 2 replicas : contrairement à Postgres, l'API est stateless - rien
+  # n'empêche d'en faire tourner plusieurs en parallèle derrière le Service
+  # pour la disponibilité (si un pod crashe, l'autre continue de répondre).
+  replicas: 2
+  selector:
+    matchLabels:
+      app: taskflow-api
+  template:
+    metadata:
+      labels:
+        app: taskflow-api
+    spec:
+      containers:
+        - name: api
+          image: docker.io/CHANGE_ME_DOCKERHUB_USERNAME/taskflow-api:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: taskflow-config
+            - secretRef:
+                name: taskflow-secrets
+
+          # Kubernetes ne route du trafic vers ce pod QUE si readinessProbe
+          # réussit - un pod qui vient de démarrer mais n'est pas encore
+          # connecté à la DB ne recevra aucune requête entre-temps.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          # livenessProbe redémarre le pod si l'app est bloquée/plantée en
+          # interne, même si le process tourne encore - readinessProbe seule
+          # ne fait que retirer le pod du trafic, jamais le redémarrer.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

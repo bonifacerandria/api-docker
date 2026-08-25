@@ -1,0 +1,31 @@
+# deploy/k8s/04-migration-job.yaml
+#
+# Un Job, pas une étape automatique au démarrage de chaque pod api : si on
+# scale l'API à 3 replicas, on ne veut surtout pas que les 3 tentent de
+# migrer la base en même temps. Ce Job se lance une fois, à la demande
+# (voir docs/azure-notes.md), typiquement avant de déployer une nouvelle
+# version de l'image.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # generateName plutôt qu'un nom fixe : un Job est immuable une fois créé,
+  # "name" fixe empêcherait de relancer une migration sans supprimer
+  # l'ancien Job à la main d'abord.
+  generateName: taskflow-migrate-
+  namespace: taskflow
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: docker.io/CHANGE_ME_DOCKERHUB_USERNAME/taskflow-api:latest
+          command: ["npm", "run", "migrate:up"]
+          envFrom:
+            - configMapRef:
+                name: taskflow-config
+            - secretRef:
+                name: taskflow-secrets

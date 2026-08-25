@@ -1,0 +1,17 @@
+# deploy/k8s/01-configmap.yaml
+#
+# Variables d'environnement NON sensibles uniquement. Tout ce qui est
+# secret (mots de passe, connection strings) va dans un Secret (voir
+# 02-secret.example.yaml), jamais ici - une ConfigMap est lisible en clair
+# par quiconque a accès en lecture au namespace.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskflow-config
+  namespace: taskflow
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  API_PREFIX: "/api/v1"
+  LOG_LEVEL: "combined"
