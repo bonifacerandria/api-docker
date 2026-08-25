@@ -1,0 +1,83 @@
+# deploy/k8s/03-postgres.yaml
+#
+# StatefulSet, pas Deployment : une base de données a besoin d'une identité
+# stable (toujours le même volume, le même nom de pod) même après un
+# redémarrage. Un Deployment ne garantit ni l'un ni l'autre - il est fait
+# pour du stateless (comme notre API), pas pour ça.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: taskflow
+spec:
+  # Service headless (clusterIP: None) : pas de load-balancing, on veut
+  # justement pouvoir adresser le pod par son nom stable
+  # (postgres-0.postgres.taskflow.svc.cluster.local), pas une IP qui
+  # changerait de pod cible.
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: taskflow
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: taskflow-secrets
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              # sh -c, pas juste ["pg_isready", "-U", "$(POSTGRES_USER)"] :
+              # une exec probe n'invoque pas de shell par défaut, donc
+              # $(VAR) n'y est PAS substitué (contrairement à
+              # command/args d'un conteneur) - sans le sh -c explicite, on
+              # se retrouverait à tester la connexion avec le nom
+              # littéral "$(POSTGRES_USER)", jamais la vraie valeur.
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi

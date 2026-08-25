@@ -394,12 +394,81 @@ corrigé en 7.5.19) - **absente de notre `package-lock.json`** : c'est le
 vulnérable en interne, pas une dépendance de l'app elle-même. Trivy scanne
 tout le système de fichiers de l'image, pas seulement nos dépendances.
 
-Corrigé dans le `Dockerfile` (stage `runner`) en mettant à jour npm vers
-`12.0.2`, qui embarque `tar@^7.5.19`. npm reste nécessaire au runtime ici
-(les migrations tournent via `npm run migrate:up` en prod), donc pas
-question de le retirer de l'image.
+Corrigé dans le `Dockerfile` (stage `runner`) en mettant à jour npm.
+⚠️ npm 12+ exige Node ≥22 (incompatible avec `node:20-alpine`) - la version
+finale retenue est `npm@10.9.9`, compatible Node 20 ET embarquant
+`tar@^7.5.22` (corrigé). Vérifier `npm view npm@<version> engines.node` et
+`dependencies.tar` avant de choisir une version, pas juste "la plus
+récente".
+
+## Module 16 : Kubernetes (k3s auto-hébergé)
+
+### ⚠️ Coexistence avec Docker Compose - PAS un remplacement immédiat
+
+Ta VM sert du vrai trafic en production via Nginx (ports 80/443,
+`mid-apptest.bmoinet.net`). k3s est installé **à côté**, sans son ingress
+Traefik (`--disable traefik`), pour ne jamais entrer en conflit avec ce
+qui tourne déjà. Le Service de l'API dans k3s est en `ClusterIP` -
+**volontairement pas accessible depuis l'extérieur du cluster**, encore
+moins depuis Internet.
+
+### Installation (une seule fois)
+
+```bash
+chmod +x deploy/k8s/install-k3s.sh
+sudo ./deploy/k8s/install-k3s.sh
+kubectl get nodes   # doit afficher le node en "Ready"
+```
+
+### Déployer la stack dans k3s
+
+```bash
+kubectl apply -f deploy/k8s/00-namespace.yaml
+kubectl apply -f deploy/k8s/01-configmap.yaml
+
+# Le Secret ne se crée JAMAIS depuis le fichier .example.yaml (placeholders
+# uniquement) - directement en ligne de commande, comme smtp_password :
+kubectl create secret generic taskflow-secrets \
+  --namespace=taskflow \
+  --from-literal=POSTGRES_DB=taskflow \
+  --from-literal=POSTGRES_USER=taskflow_user \
+  --from-literal=POSTGRES_PASSWORD='<vrai_mot_de_passe>' \
+  --from-literal=DATABASE_URL='postgresql://taskflow_user:<vrai_mot_de_passe>@postgres:5432/taskflow'
+
+kubectl apply -f deploy/k8s/03-postgres.yaml
+kubectl wait --for=condition=Ready pod -l app=postgres -n taskflow --timeout=120s
+
+# Remplacer CHANGE_ME_DOCKERHUB_USERNAME dans les 2 fichiers suivants avant apply
+kubectl apply -f deploy/k8s/04-migration-job.yaml
+kubectl apply -f deploy/k8s/05-api-deployment.yaml
+kubectl apply -f deploy/k8s/06-api-service.yaml
+```
+
+### Tester SANS toucher au trafic public (port-forward)
+
+```bash
+kubectl port-forward -n taskflow svc/taskflow-api 8081:80
+curl http://localhost:8081/health
+```
+
+### Vérifier l'état
+
+```bash
+kubectl get pods -n taskflow
+kubectl logs -n taskflow -l app=taskflow-api --tail=50
+kubectl get jobs -n taskflow   # vérifier que la migration a bien réussi (Completed)
+```
+
+### La vraie bascule (plus tard, décision consciente, pas dans ce module)
+
+Basculer Nginx vers k3s demandera d'exposer le Service autrement qu'en
+`ClusterIP` (NodePort, ou installer un ingress controller sur un port
+dédié) et de mettre à jour `deploy/nginx/taskflow.conf` pour pointer
+dessus - étape volontairement PAS faite ici, à traiter en connaissance de
+cause une fois k3s validé en parallèle pendant un moment.
 
 ## À venir dans les prochains modules
 
-- **Module 16** : décision à prendre — Kubernetes auto-hébergé (k3s) sur cette même VM, ou migration vers AKS.
+- **Module 17** : Helm - empaqueter ces mêmes manifests proprement (values.yaml, templates), au lieu de fichiers YAML bruts.
+- **Module 18** : GitOps avec Argo CD.
 - **Module 19** : Terraform avec le provider `azurerm`.

@@ -1,0 +1,19 @@
+# deploy/k8s/06-api-service.yaml
+#
+# ClusterIP (pas LoadBalancer, pas NodePort) : accessible uniquement DEPUIS
+# l'intérieur du cluster pour l'instant. Volontaire - voir azure-notes.md,
+# section "Coexistence avec Docker Compose" : pas d'exposition publique
+# tant que la bascule n'est pas décidée consciemment.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskflow-api
+  namespace: taskflow
+spec:
+  type: ClusterIP
+  selector:
+    app: taskflow-api
+  ports:
+    - port: 80
+      targetPort: 3000
