@@ -22,7 +22,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: docker.io/CHANGE_ME_DOCKERHUB_USERNAME/taskflow-api:latest
+          image: docker.io/bonifacemada/taskflow-api:latest
           command: ["npm", "run", "migrate:up"]
           envFrom:
             - configMapRef:
