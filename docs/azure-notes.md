@@ -412,6 +412,22 @@ qui tourne déjà. Le Service de l'API dans k3s est en `ClusterIP` -
 **volontairement pas accessible depuis l'extérieur du cluster**, encore
 moins depuis Internet.
 
+### ⚠️ Incompatibilité rencontrée : Ubuntu 20.04 = cgroup v1
+
+Cette VM tourne sur Ubuntu 20.04 (cgroup v1 par défaut). Depuis Kubernetes
+v1.35, le kubelet **refuse de démarrer** sur cgroup v1 sauf override
+explicite - la version k3s "latest" installée initialement (`v1.36.3+k3s1`)
+provoquait une boucle de crash au démarrage (`kubelet is configured to not
+run on a host using cgroup v1`).
+
+**Résolu en épinglant k3s à `v1.28.15+k3s1`** dans `install-k3s.sh` -
+version antérieure à ce changement de comportement, pleinement compatible
+cgroup v1. C'est un contournement, pas une correction définitive : la
+vraie solution de fond reste de faire monter la VM en cgroup v2 (paramètre
+kernel + reboot) ou de migrer vers une version d'Ubuntu plus récente -
+à planifier séparément, en fenêtre de maintenance, pas en urgence tant
+que `v1.28.15+k3s1` reste maintenu en sécurité.
+
 ### Installation (une seule fois)
 
 ```bash
@@ -439,7 +455,14 @@ kubectl apply -f deploy/k8s/03-postgres.yaml
 kubectl wait --for=condition=Ready pod -l app=postgres -n taskflow --timeout=120s
 
 # Remplacer CHANGE_ME_DOCKERHUB_USERNAME dans les 2 fichiers suivants avant apply
-kubectl apply -f deploy/k8s/04-migration-job.yaml
+
+# Le Job de migration NE se lance PAS avec `kubectl apply` directement
+# (generateName incompatible avec apply, et un Job est immuable une fois
+# créé) - toujours passer par ce script, à chaque déploiement d'une
+# nouvelle version :
+chmod +x deploy/k8s/run-migration.sh
+./deploy/k8s/run-migration.sh
+
 kubectl apply -f deploy/k8s/05-api-deployment.yaml
 kubectl apply -f deploy/k8s/06-api-service.yaml
 ```
