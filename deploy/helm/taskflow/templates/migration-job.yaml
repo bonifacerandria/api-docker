@@ -26,8 +26,14 @@ spec:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["npm", "run", "migrate:up"]
+          # PAS de configMapRef ici : contrairement à l'api-deployment,
+          # `npm run migrate:up` (node-pg-migrate) ne lit que DATABASE_URL,
+          # jamais NODE_ENV/PORT/API_PREFIX/LOG_LEVEL. C'est important, pas
+          # juste une optimisation : un hook "pre-install" s'exécute AVANT
+          # que Helm ne crée les ressources normales du chart (dont cette
+          # ConfigMap fait partie) - la référencer ici provoquait
+          # "CreateContainerConfigError" au tout premier `helm install`,
+          # puisque la ConfigMap n'existait pas encore à ce moment précis.
           envFrom:
-            - configMapRef:
-                name: {{ include "taskflow.fullname" . }}-config
             - secretRef:
                 name: {{ include "taskflow.secretName" . }}
