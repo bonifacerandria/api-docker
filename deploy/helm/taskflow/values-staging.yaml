@@ -1,0 +1,24 @@
+# deploy/helm/taskflow/values-staging.yaml
+#
+# Exemple concret du principe "même Chart, environnement différent" :
+# helm install taskflow-staging ./taskflow -f values-staging.yaml
+#
+# Seules les différences avec values.yaml sont nécessaires ici - tout le
+# reste (probes, structure des templates...) reste hérité du Chart.
+
+replicaCount: 1
+
+image:
+  tag: latest
+
+resources:
+  api:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+postgres:
+  storage: 1Gi

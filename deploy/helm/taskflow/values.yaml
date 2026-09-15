@@ -1,0 +1,71 @@
+# deploy/helm/taskflow/values.yaml
+#
+# Valeurs par défaut du Chart - correspondent à ce qu'on avait codé en dur
+# dans les manifests bruts du module 16. Surcharger avec un fichier séparé
+# (ex: values-staging.yaml) plutôt que d'éditer celui-ci pour un autre
+# environnement.
+
+replicaCount: 2
+
+image:
+  repository: docker.io/bonifacemada/taskflow-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources:
+  api:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  postgres:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+config:
+  nodeEnv: production
+  port: 3000
+  apiPrefix: /api/v1
+  logLevel: combined
+
+postgres:
+  storage: 2Gi
+
+# --- Secrets ---
+# Deux façons d'utiliser ce Chart :
+#
+# 1. existingSecret vide (défaut) : le Chart CRÉE le Secret depuis les
+#    valeurs ci-dessous. Pratique pour un test rapide, mais alors
+#    postgresPassword/databaseUrl finiraient en clair dans ce fichier si tu
+#    les remplis ici - NE JAMAIS committer de vraies valeurs de cette façon.
+#
+# 2. existingSecret renseigné (recommandé en prod) : le Chart ignore les
+#    valeurs ci-dessous et référence un Secret déjà créé à la main sur le
+#    cluster - même principe que smtp_password (module 13) ou le Secret
+#    k8s du module 16 :
+#      kubectl create secret generic taskflow-secrets -n taskflow \
+#        --from-literal=POSTGRES_DB=taskflow \
+#        --from-literal=POSTGRES_USER=taskflow_user \
+#        --from-literal=POSTGRES_PASSWORD='<vrai_mot_de_passe>' \
+#        --from-literal=DATABASE_URL='postgresql://taskflow_user:<vrai_mot_de_passe>@RELEASE_NAME-postgres:5432/taskflow'
+#      puis : --set secrets.existingSecret=taskflow-secrets
+secrets:
+  existingSecret: ""
+  postgresDb: taskflow
+  postgresUser: taskflow_user
+  postgresPassword: ""
+  databaseUrl: ""
+
+probes:
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20

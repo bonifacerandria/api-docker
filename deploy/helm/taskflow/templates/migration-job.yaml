@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "taskflow.fullname" . }}-migrate
+  labels:
+    {{- include "taskflow.labels" . | nindent 4 }}
+  annotations:
+    # Hook Helm : ce Job s'exécute automatiquement avant chaque install/
+    # upgrade, jamais au démarrage de chaque pod api (même raison qu'au
+    # module 16 : scaler à plusieurs replicas ne doit jamais déclencher
+    # plusieurs migrations concurrentes).
+    #
+    # "before-hook-creation" supprime automatiquement l'ancien Job avant
+    # d'en recréer un frais - exactement ce que run-migration.sh faisait
+    # à la main (kubectl delete puis apply) au module 16. Ici c'est natif
+    # à Helm, plus besoin du script.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook-weight": "-5"
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["npm", "run", "migrate:up"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "taskflow.fullname" . }}-config
+            - secretRef:
+                name: {{ include "taskflow.secretName" . }}
