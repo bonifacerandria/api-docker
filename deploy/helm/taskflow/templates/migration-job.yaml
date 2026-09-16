@@ -5,16 +5,24 @@ metadata:
   labels:
     {{- include "taskflow.labels" . | nindent 4 }}
   annotations:
-    # Hook Helm : ce Job s'exécute automatiquement avant chaque install/
-    # upgrade, jamais au démarrage de chaque pod api (même raison qu'au
-    # module 16 : scaler à plusieurs replicas ne doit jamais déclencher
-    # plusieurs migrations concurrentes).
+    # Hook Helm : ce Job s'exécute automatiquement à chaque install/upgrade,
+    # jamais au démarrage de chaque pod api (même raison qu'au module 16 :
+    # scaler à plusieurs replicas ne doit jamais déclencher plusieurs
+    # migrations concurrentes).
+    #
+    # "post-install", PAS "pre-install" : un hook pre-install s'exécute
+    # AVANT que Helm ne crée les ressources normales du chart - dont le
+    # StatefulSet/Service PostgreSQL. Au tout premier `helm install`, la
+    # migration tentait donc de se connecter à "taskflow-postgres" avant
+    # même que ce Service existe. "pre-upgrade" reste correct pour les
+    # mises à jour : à ce moment-là, PostgreSQL existe déjà depuis
+    # l'installation précédente.
     #
     # "before-hook-creation" supprime automatiquement l'ancien Job avant
     # d'en recréer un frais - exactement ce que run-migration.sh faisait
     # à la main (kubectl delete puis apply) au module 16. Ici c'est natif
     # à Helm, plus besoin du script.
-    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook": post-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
     "helm.sh/hook-weight": "-5"
 spec:
@@ -22,18 +30,28 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      # Même en post-install, Helm crée l'OBJET Service/StatefulSet sans
+      # attendre que le pod PostgreSQL soit réellement prêt à répondre à
+      # l'intérieur - il faut donc attendre activement, pas juste espérer
+      # un ordre de création favorable.
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ include "taskflow.fullname" . }}-postgres -p 5432; do
+                echo "En attente de PostgreSQL..."
+                sleep 2
+              done
       containers:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["npm", "run", "migrate:up"]
           # PAS de configMapRef ici : contrairement à l'api-deployment,
           # `npm run migrate:up` (node-pg-migrate) ne lit que DATABASE_URL,
-          # jamais NODE_ENV/PORT/API_PREFIX/LOG_LEVEL. C'est important, pas
-          # juste une optimisation : un hook "pre-install" s'exécute AVANT
-          # que Helm ne crée les ressources normales du chart (dont cette
-          # ConfigMap fait partie) - la référencer ici provoquait
-          # "CreateContainerConfigError" au tout premier `helm install`,
-          # puisque la ConfigMap n'existait pas encore à ce moment précis.
+          # jamais NODE_ENV/PORT/API_PREFIX/LOG_LEVEL - pas nécessaire.
           envFrom:
             - secretRef:
                 name: {{ include "taskflow.secretName" . }}
