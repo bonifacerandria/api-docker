@@ -209,7 +209,9 @@ sudo ./deploy/systemd/install.sh
 
 ```bash
 cd /var/www/api-docker   # ou le chemin de AZURE_VM_APP_PATH
-./deploy/deploy.sh sha-abc1234   # ou "latest"
+./deploy/deploy.sh sha-xxxxxxx   # ou "latest" - sha-xxxxxxx est un EXEMPLE,
+                                   # remplacer par un vrai tag visible sur
+                                   # hub.docker.com/r/<ton_username>/taskflow-api/tags
 ```
 
 ### Vérifier le service au boot
@@ -533,8 +535,13 @@ démarre (hook `pre-install`/`pre-upgrade`) - plus besoin de
 helm upgrade taskflow ./deploy/helm/taskflow \
   --namespace taskflow \
   --set secrets.existingSecret=taskflow-secrets \
-  --set image.tag=sha-abc1234
+  --set image.tag=sha-xxxxxxx
 ```
+⚠️ `sha-xxxxxxx` est un EXEMPLE, pas une vraie valeur - remplacer par un
+tag qui existe réellement sur `hub.docker.com/r/<ton_username>/taskflow-api/tags`
+(ou juste `latest`). Un tag inexistant provoque un `ImagePullBackOff` sur
+le Job de migration, qui bloque tout l'upgrade (`pre-upgrade hooks failed:
+timed out waiting for the condition`) - vécu le 27 août 2026.
 
 ### Revenir en arrière si besoin
 
