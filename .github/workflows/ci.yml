@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Voir le commentaire détaillé dans le job build-production-image :
       # aquasecurity/trivy-action a été compromis le 19 mars 2026
@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Construire l'image du stage "test"
         run: docker build --target test -t taskflow-api:ci-test .
@@ -153,7 +153,7 @@ jobs:
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Construire l'image de production (stage "runner")
         run: docker build --target runner -t taskflow-api:ci-runner .
