@@ -3,7 +3,7 @@
 # ============================================================
 # Base
 # ============================================================
-FROM node:20-alpine AS base
+FROM node:26-alpine AS base
 
 WORKDIR /app
 
@@ -41,7 +41,7 @@ CMD ["npm", "test"]
 # ============================================================
 # Stage PRODUCTION
 # ============================================================
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 
 WORKDIR /app
 
